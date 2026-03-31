@@ -387,11 +387,11 @@ body {
 .scan-frame {
   width: 300px;
   height: 300px;
-  border: 3px solid rgba(56, 189, 248, 0.95);
+  border: 3px solid transparent;
   border-radius: 18px;
   box-shadow:
     0 0 0 9999px rgba(0, 0, 0, 0.45),
-    inset 0 0 0 2px rgba(14, 165, 233, 0.45);
+    inset 0 0 0 2px transparent;
 }
 
 .scan-hint {
