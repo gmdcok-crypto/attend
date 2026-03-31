@@ -1,0 +1,9 @@
+# Nixpacks 빌드 계획 — Python API 전용 (Dockerfile 없음)
+# railway.toml 의 buildCommand 와 함께 사용
+# https://nixpacks.com/docs/configuration/file
+
+[variables]
+NIXPACKS_PYTHON_VERSION = "3.12"
+
+[phases.setup]
+nixPkgs = ["python312", "gcc"]

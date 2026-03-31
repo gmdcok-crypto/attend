@@ -1,9 +1,10 @@
-# Railway 프로젝트 gs_attend — API만 배포 (Docker 미사용 · Nixpacks)
+# Railway — Docker / Dockerfile / Railpack 자동 이미지 빌드 사용 안 함.
+# 빌더는 Nixpacks만 사용한다. (대시보드 Build 에서도 Nixpacks 선택 권장)
 # https://docs.railway.com/reference/config-as-code
 
 [build]
-builder = "nixpacks"
-# 루트에 package.json 이 있어도 Vite/tsc 는 돌리지 않음 (Node 18 이슈 방지)
+builder = "NIXPACKS"
+# package.json 이 있어도 npm/Vite 는 실행하지 않음
 buildCommand = "pip install --no-cache-dir -r requirements.txt"
 
 [deploy]

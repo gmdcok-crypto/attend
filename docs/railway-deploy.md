@@ -8,7 +8,11 @@
 - **Railway 프로젝트 이름**: **`gs_attend`** (이 레포 백엔드·DB를 묶는 프로젝트)
 - 한 프로젝트 안에 **DB 서비스 + Web(API) 서비스**를 둔다.
 
-레포 루트에 **`railway.toml`** 으로 **Nixpacks** 빌드를 쓴다 (**Dockerfile 사용 안 함**). **`buildCommand`** 는 `pip install -r requirements.txt` 만 실행해, 루트의 `package.json` 때문에 **`npm run build`(Vite)** 가 돌아가 Node 버전 문제가 나지 않게 한다. 시작은 **`uvicorn backend.main:app --host 0.0.0.0 --port $PORT`**. 루트 **`requirements.txt`** 는 `backend/requirements.txt` 와 동일 내용을 유지한다.
+레포 루트에 **`railway.toml`** (`builder = NIXPACKS`) + **`nixpacks.toml`** 으로 **Nixpacks만** 쓴다. **Dockerfile·Railpack 자동 Docker 빌드는 사용하지 않는다** (레포에 `Dockerfile` 없음).
+
+**Railway 대시보드**에서도 한 번 확인한다: 해당 서비스 **Settings → Build → Builder** 가 **Nixpacks** 인지 ( **Dockerfile** / **Railpack** 이 아닌지 ). UI가 Railpack이면 로그에 `COPY . /app` 같은 Docker 단계가 나올 수 있다.
+
+**`buildCommand`** 는 `pip install -r requirements.txt` 만 실행해, 루트의 `package.json` 때문에 **`npm run build`(Vite)** 가 기본 실행되지 않게 한다. 시작은 **`uvicorn backend.main:app --host 0.0.0.0 --port $PORT`**. 루트 **`requirements.txt`** 는 `backend/requirements.txt` 와 동일 내용을 유지한다.
 
 프론트 정적 빌드(`npm run build`)는 **로컬·CI·별도 Static 서비스**에서 수행한다. Railway API 서비스에서 `npm run build`가 호출되는 예외 상황을 대비해 **`scripts/build.mjs`** 는 Railway 환경 변수가 있으면 **즉시 종료(스킵)** 한다.
 
