@@ -8,14 +8,14 @@
 - **Railway 프로젝트 이름**: **`gs_attend`** (이 레포 백엔드·DB를 묶는 프로젝트)
 - 한 프로젝트 안에 **DB 서비스 + Web(API) 서비스**를 둔다.
 
-레포 루트에 **`railway.toml`** 이 있으면 시작 명령은 `uvicorn backend.main:app --host 0.0.0.0 --port $PORT` 로 고정된다. 루트 **`requirements.txt`** 는 Nixpacks가 Python 의존성 설치에 사용한다 (`backend/requirements.txt` 와 동일 내용 유지).
+레포 루트에 **`Dockerfile`** + **`railway.toml`** (`builder = DOCKERFILE`) 로 이미지를 빌드한다. 컨테이너 안에서는 **`uvicorn backend.main:app --host 0.0.0.0 --port $PORT`** 로 기동한다. 루트 **`requirements.txt`** 는 Docker 빌드 시 `pip install` 에 사용한다 (`backend/requirements.txt` 와 동일 내용 유지).
 
 ## 서비스 구성(권장) — 프로젝트 `gs_attend`
 
 1. **Database**: MySQL/MariaDB 추가 → `MYSQL_DATABASE` / 스키마 이름 **`gs_attend`** (HeidiSQL에서 빈 DB로 만들어 둔 것과 동일).
 2. **Web Service**: **GitHub** `gmdcok-crypto/attend` 연결, 브랜치 **`main`**, **Root directory 비움(저장소 루트)**.
 3. Web Service **Variables**에 `DB_*`, `JWT_SECRET` 등 설정(아래 표).
-4. **Deploy** — 빌드가 루트 `requirements.txt` 를 쓰고, 실행은 `railway.toml` 의 uvicorn 명령을 따른다.
+4. **Deploy** — Docker 이미지 빌드(`Dockerfile`) 후 컨테이너가 API를 띄운다.
 
 ## DB 연결 — 반드시 사설(프라이빗) 엔드포인트
 
@@ -58,8 +58,7 @@ Railway **MySQL/MariaDB 서비스**에는 보통 `MYSQL_DATABASE`, `MYSQLUSER`, 
 
 ## 빌드·실행 명령 (API 서비스)
 
-- **Install**: Nixpacks가 루트 `requirements.txt` 로 `pip install` (로컬 개발은 계속 `pip install -r backend/requirements.txt` 도 동일).
-- **Start**: `railway.toml` / `Procfile` 과 동일 — `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
+- **Install / Start**: `Dockerfile` 의 `pip install -r requirements.txt` 및 `CMD` (로컬 개발은 `npm run dev:api`).
 
 `PORT`는 Railway가 주입한다. 로컬은 `npm run dev:api`와 다르게 **0.0.0.0** 바인딩이 필요하다.
 
