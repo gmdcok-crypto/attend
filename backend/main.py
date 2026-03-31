@@ -42,22 +42,23 @@ load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 async def _lifespan(app: FastAPI):
     conn = get_connection()
     try:
-        if ensure_employee_auth_columns(conn):
-            conn.commit()
-            print("[attend-api] employees 테이블에 password_hash / auth_status 컬럼을 추가했습니다.")
-        if ensure_employee_leave_tables(conn):
-            conn.commit()
-            print("[attend-api] 개인별 휴가 테이블(employee_leave_*)을 생성했습니다.")
-        if ensure_work_shift_types_table(conn):
-            conn.commit()
-            print("[attend-api] 근무시간 유형 테이블(work_shift_types)을 생성했습니다.")
-    except Exception as e:  # noqa: BLE001
-        conn.rollback()
-        print(f"[attend-api] 스키마 보강 실패 (DB 확인): {e}")
-        raise
+        try:
+            if ensure_employee_auth_columns(conn):
+                conn.commit()
+                print("[attend-api] employees 테이블에 password_hash / auth_status 컬럼을 추가했습니다.")
+            if ensure_employee_leave_tables(conn):
+                conn.commit()
+                print("[attend-api] 개인별 휴가 테이블(employee_leave_*)을 생성했습니다.")
+            if ensure_work_shift_types_table(conn):
+                conn.commit()
+                print("[attend-api] 근무시간 유형 테이블(work_shift_types)을 생성했습니다.")
+        except Exception as e:  # noqa: BLE001
+            conn.rollback()
+            print(f"[attend-api] 스키마 보강 실패 (DB 확인): {e}")
+            raise
+        yield
     finally:
         conn.close()
-    yield
 
 
 app = FastAPI(title="attend-api", version="0.1.0", lifespan=_lifespan)
