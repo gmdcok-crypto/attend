@@ -569,6 +569,9 @@ type DashboardSummary = {
   }>
 }
 
+const DASHBOARD_REFRESH_MS = 5000
+let dashboardRefreshTimer: number | null = null
+
 async function loadDashboard() {
   const s = await apiJson<DashboardSummary>('/api/dashboard/summary')
   const setText = (id: string, v: string) => {
@@ -602,6 +605,21 @@ async function loadDashboard() {
   }
 }
 
+function stopDashboardAutoRefresh() {
+  if (dashboardRefreshTimer != null) {
+    window.clearInterval(dashboardRefreshTimer)
+    dashboardRefreshTimer = null
+  }
+}
+
+function startDashboardAutoRefresh() {
+  stopDashboardAutoRefresh()
+  void loadDashboard().catch((e) => console.warn('[admin] dashboard refresh', e))
+  dashboardRefreshTimer = window.setInterval(() => {
+    void loadDashboard().catch((e) => console.warn('[admin] dashboard refresh', e))
+  }, DASHBOARD_REFRESH_MS)
+}
+
 function showView(id: string) {
   document.querySelectorAll('.admin-view').forEach((el) => {
     el.classList.toggle('is-active', el.getAttribute('data-view') === id)
@@ -614,7 +632,8 @@ function showView(id: string) {
     titleEl.textContent = titles[id] ?? id
   }
   document.getElementById('admin-topbar')?.classList.toggle('admin-topbar--employees', id === 'employees')
-  if (id === 'dashboard') loadDashboard().catch((e) => adminAlert(String(e)))
+  if (id === 'dashboard') startDashboardAutoRefresh()
+  else stopDashboardAutoRefresh()
   if (id === 'raw') loadRawPanel().catch((e) => adminAlert(String(e)))
   if (id === 'leave-emp') refreshLeaveEmpView().catch((e) => adminAlert(String(e)))
 }
@@ -1740,4 +1759,15 @@ wireCrudLeave()
 wireCrudWorkShift()
 wireLeaveEmp()
 initRawToolbarDates()
-loadDashboard().catch((e) => console.error('[admin] 대시보드', e))
+startDashboardAutoRefresh()
+
+document.addEventListener('visibilitychange', () => {
+  const activeView = document.querySelector('.admin-view.is-active')?.getAttribute('data-view')
+  if (document.hidden) {
+    stopDashboardAutoRefresh()
+    return
+  }
+  if (activeView === 'dashboard') {
+    startDashboardAutoRefresh()
+  }
+})

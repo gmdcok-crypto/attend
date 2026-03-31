@@ -62,6 +62,7 @@ export function attendAppMarkup(): string {
           </div>
           <p class="scan-hint-in-frame">회사 비치 태블릿의 QR을 프레임 안에 맞춰 주세요.</p>
         </div>
+        <p class="scan-digital-clock" id="scan-digital-clock" aria-live="polite">--:--:--</p>
         <p class="scan-err" id="scan-err" role="alert" hidden></p>
         <div class="scan-footer-actions">
           <button type="button" class="scan-mock-success" id="scan-dev-qr" hidden>
@@ -330,10 +331,15 @@ function pad2(n: number) {
 
 export function tickHomeClock() {
   const clockEl = document.getElementById('home-clock')
+  const scanClockEl = document.getElementById('scan-digital-clock')
   const dateEl = document.getElementById('home-date-line')
   const now = new Date()
+  const hhmmss = `${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())}`
   if (clockEl) {
-    clockEl.textContent = `${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())}`
+    clockEl.textContent = hhmmss
+  }
+  if (scanClockEl) {
+    scanClockEl.textContent = hhmmss
   }
   if (dateEl) {
     dateEl.textContent = now.toLocaleDateString('ko-KR', {
