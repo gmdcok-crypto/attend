@@ -8,4 +8,5 @@ builder = "NIXPACKS"
 buildCommand = "pip install --no-cache-dir -r requirements.txt"
 
 [deploy]
-startCommand = "uvicorn backend.main:app --host 0.0.0.0 --port $PORT"
+# --log-level warning: 접속/재시작 시 로그 폭주로 Railway 500 logs/s 제한 완화
+startCommand = "uvicorn backend.main:app --host 0.0.0.0 --port $PORT --log-level warning"

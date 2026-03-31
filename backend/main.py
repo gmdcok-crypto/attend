@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime
@@ -37,6 +38,22 @@ from backend.schema_ensure import (
 # database.py 에서도 load 하지만, 단독 실행 시 대비
 load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 
+logger = logging.getLogger("attend-api")
+
+
+def _root_log_level() -> int:
+    if os.getenv("LOG_LEVEL"):
+        return getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO)
+    if os.getenv("RAILWAY_ENVIRONMENT") or os.getenv("RAILWAY_SERVICE_NAME"):
+        return logging.WARNING
+    return logging.INFO
+
+
+logging.basicConfig(
+    level=_root_log_level(),
+    format="%(levelname)s %(name)s: %(message)s",
+)
+
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
@@ -45,16 +62,18 @@ async def _lifespan(app: FastAPI):
         try:
             if ensure_employee_auth_columns(conn):
                 conn.commit()
-                print("[attend-api] employees 테이블에 password_hash / auth_status 컬럼을 추가했습니다.")
+                logger.warning(
+                    "employees 테이블에 password_hash / auth_status 컬럼을 추가했습니다."
+                )
             if ensure_employee_leave_tables(conn):
                 conn.commit()
-                print("[attend-api] 개인별 휴가 테이블(employee_leave_*)을 생성했습니다.")
+                logger.warning("개인별 휴가 테이블(employee_leave_*)을 생성했습니다.")
             if ensure_work_shift_types_table(conn):
                 conn.commit()
-                print("[attend-api] 근무시간 유형 테이블(work_shift_types)을 생성했습니다.")
+                logger.warning("근무시간 유형 테이블(work_shift_types)을 생성했습니다.")
         except Exception as e:  # noqa: BLE001
             conn.rollback()
-            print(f"[attend-api] 스키마 보강 실패 (DB 확인): {e}")
+            logger.error("스키마 보강 실패 (DB 확인): %s", e)
             raise
         yield
     finally:
@@ -90,9 +109,12 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
             status_code=exc.status_code,
             content={"detail": exc.detail},
         )
-    import traceback
+    if os.getenv("DEBUG_TRACEBACK", "").lower() in ("1", "true", "yes"):
+        import traceback
 
-    traceback.print_exc()
+        traceback.print_exc()
+    else:
+        logger.error("unhandled %s: %s", type(exc).__name__, exc)
     return JSONResponse(
         status_code=500,
         content={"detail": str(exc), "error_type": type(exc).__name__},
