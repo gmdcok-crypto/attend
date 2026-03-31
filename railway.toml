@@ -1,0 +1,8 @@
+# Railway 프로젝트 gs_attend — 백엔드(FastAPI) 배포용
+# https://docs.railway.com/reference/config-as-code
+
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "uvicorn backend.main:app --host 0.0.0.0 --port $PORT"

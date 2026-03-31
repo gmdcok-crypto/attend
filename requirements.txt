@@ -1,0 +1,8 @@
+# Railway / Nixpacks 가 루트에서 자동 인식하도록 둠. 내용은 backend/requirements.txt 와 동일하게 유지할 것.
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+# Official MariaDB Connector/Python: https://pypi.org/project/mariadb/
+mariadb>=1.1.0
+python-dotenv>=1.0.0
+bcrypt>=4.0.0
+PyJWT>=2.8.0
