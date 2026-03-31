@@ -10,6 +10,10 @@
 
 레포 루트에 **`railway.toml`** (`builder = NIXPACKS`) + **`nixpacks.toml`** 으로 **Nixpacks만** 쓴다. **Dockerfile·Railpack 자동 Docker 빌드는 사용하지 않는다** (레포에 `Dockerfile` 없음).
 
+빌드 로그에 **`npm ci` / `npm: command not found`** 가 나오면 **Railpack**이 `package.json`을 보고 Node 단계를 도는 경우가 많다. 레포에 **`.node-version`**, **`package.json`의 `engines.node`** 로 Node 20+ 를 힌트할 수 있지만, **근본적으로는 Builder 를 `Nixpacks`로 바꾸고** `pip install …` 만 쓰는 편이 안전하다.
+
+빌드 로그에 **`npm ci` / `npm: command not found`** 가 나오면 **Railpack**이 `package.json`을 보고 Node 단계를 도는 경우가 많다. 레포에 **`.node-version`**, **`package.json`의 `engines.node`** 로 Node 20+ 를 힌트할 수 있지만, **근본적으로는 Builder 를 `Nixpacks`로 바꾸고** `pip install …` 만 쓰는 편이 안전하다.
+
 **Railway 대시보드**에서도 한 번 확인한다: 해당 서비스 **Settings → Build → Builder** 가 **Nixpacks** 인지 ( **Dockerfile** / **Railpack** 이 아닌지 ). UI가 Railpack이면 로그에 `COPY . /app`, **`[internal] load .dockerignore`** 같은 Docker/BuildKit 단계가 나올 수 있다. 그 로그는 **“지금 빌드 엔진이 Docker 계열이다”**는 뜻이지, 레포에 반드시 Dockerfile이 있는 건 아니다.
 
 레포에 **`.dockerignore`** 를 두면(무시할 경로만 나열) 위 빌드가 돌 때 컨텍스트만 줄어든다. **Docker를 끄는 설정은 아니고**, Builder를 **Nixpacks**로 맞추는 것이 핵심이다.
