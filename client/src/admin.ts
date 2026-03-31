@@ -938,7 +938,6 @@ function wireCrudDept() {
         clearSelect()
         c.value = ''
         n.value = ''
-        adminAlert('추가되었습니다.')
       })
       .catch((err) => adminAlert(String(err)))
   })
@@ -1133,7 +1132,6 @@ function wireCrudEmployees() {
         d.value = ''
         h.value = ''
         st.value = '재직'
-        adminAlert('추가되었습니다.')
       })
       .catch((err) => adminAlert(String(err)))
   })
@@ -1304,7 +1302,6 @@ function wireCrudLeave() {
         clearSelect()
         c.value = ''
         n.value = ''
-        adminAlert('추가되었습니다.')
       })
       .catch((err) => adminAlert(String(err)))
   })
@@ -1439,7 +1436,6 @@ function wireCrudWorkShift() {
         n.value = ''
         cin.value = ''
         cout.value = ''
-        adminAlert('추가되었습니다.')
       })
       .catch((err) => adminAlert(String(err)))
   })
