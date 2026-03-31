@@ -369,13 +369,14 @@ body {
 }
 
 .scan-digital-clock {
-  margin: 2px 20px 6px;
+  margin: -2px 20px 8px;
   text-align: center;
-  font-size: 1.05rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--text);
+  font-size: 1.32rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #ffffff;
   font-family: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, monospace;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.75);
 }
 
 .scan-err[hidden] {
@@ -388,7 +389,7 @@ body {
   border: 3px solid rgba(255, 255, 255, 0.85);
   border-radius: 16px;
   /* html5-qrcode 기본 가이드 박스와 시각적으로 중앙 정렬 보정 */
-  transform: translateY(-22px);
+  transform: translateY(-34px);
   box-shadow:
     0 0 0 9999px rgba(0, 0, 0, 0.45),
     inset 0 0 0 2px rgba(13, 148, 136, 0.6);
