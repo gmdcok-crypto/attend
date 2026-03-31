@@ -5,7 +5,7 @@
 [build]
 builder = "NIXPACKS"
 # 프론트(client) 정적 빌드 후 FastAPI 의존성 설치
-buildCommand = "cd client && npm ci && npx tsc && npx vite build && cd .. && pip install --no-cache-dir -r requirements.txt"
+buildCommand = "cd client && npm install --include=optional && npx tsc && npx vite build && cd .. && pip install --no-cache-dir -r requirements.txt"
 
 [deploy]
 # --log-level warning: 접속/재시작 시 로그 폭주로 Railway 500 logs/s 제한 완화

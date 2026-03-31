@@ -4,7 +4,8 @@
 
 [variables]
 NIXPACKS_PYTHON_VERSION = "3.12"
+NIXPACKS_NODE_VERSION = "22"
 
 [phases.setup]
-# API + 정적 프론트(client/dist) 빌드를 위해 Node 런타임 포함
-nixPkgs = ["...", "nodejs"]
+# API + 정적 프론트(client/dist) 빌드를 위해 Node 22 런타임 포함
+nixPkgs = ["...", "nodejs_22"]
