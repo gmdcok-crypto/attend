@@ -4,6 +4,7 @@ export const SESSION_KEY = 'attend_mobile_session_v2'
 
 export type MobileSession = {
   access_token: string
+  refresh_token: string
   employee_no: string
   name: string
 }
@@ -14,16 +15,19 @@ export function authHeaderForFetch(): Record<string, string> {
   return {}
 }
 
-export async function apiMobileJson<T>(path: string, init?: RequestInit): Promise<T> {
+function buildHeaders(init?: RequestInit, useAuth = true): HeadersInit {
   const headers: HeadersInit = {
     Accept: 'application/json',
-    ...authHeaderForFetch(),
+    ...(useAuth ? authHeaderForFetch() : {}),
     ...(init?.headers ?? {}),
   }
-  if (init?.body != null && !(init.headers && 'Content-Type' in (init.headers as Record<string, string>))) {
+  if (init?.body != null && !(init?.headers && 'Content-Type' in (init.headers as Record<string, string>))) {
     ;(headers as Record<string, string>)['Content-Type'] = 'application/json'
   }
-  const r = await fetch(path, { ...init, headers })
+  return headers
+}
+
+async function parseJsonResponse<T>(r: Response): Promise<T> {
   const text = await r.text()
   let data: unknown = null
   if (text) {
@@ -46,13 +50,76 @@ export async function apiMobileJson<T>(path: string, init?: RequestInit): Promis
   return data as T
 }
 
+let refreshInFlight: Promise<boolean> | null = null
+
+async function refreshAccessToken(): Promise<boolean> {
+  const s = readSession()
+  if (!s?.refresh_token) return false
+  if (refreshInFlight) return refreshInFlight
+
+  refreshInFlight = (async () => {
+    try {
+      const r = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        headers: buildHeaders({ body: JSON.stringify({ refresh_token: s.refresh_token }) }, false),
+        body: JSON.stringify({ refresh_token: s.refresh_token }),
+      })
+      const data = await parseJsonResponse<{
+        access_token: string
+        refresh_token: string
+        employee_no: string
+        name: string
+      }>(r)
+      saveSession(data.access_token, data.refresh_token, data.employee_no, data.name)
+      return true
+    } catch {
+      clearSession()
+      return false
+    } finally {
+      refreshInFlight = null
+    }
+  })()
+
+  return refreshInFlight
+}
+
+function shouldSkipAutoRefresh(path: string): boolean {
+  return path.includes('/api/auth/login') || path.includes('/api/auth/refresh')
+}
+
+export async function apiMobileJson<T>(path: string, init?: RequestInit): Promise<T> {
+  const tryRequest = async (): Promise<Response> => {
+    const headers = buildHeaders(init, true)
+    return fetch(path, { ...init, headers })
+  }
+
+  let r = await tryRequest()
+  if (r.status === 401 && !shouldSkipAutoRefresh(path) && readSession()?.refresh_token) {
+    const refreshed = await refreshAccessToken()
+    if (refreshed) {
+      r = await tryRequest()
+    }
+  }
+  return parseJsonResponse<T>(r)
+}
+
 export function readSession(): MobileSession | null {
   try {
     const raw = localStorage.getItem(SESSION_KEY)
     if (!raw) return null
-    const o = JSON.parse(raw) as { access_token?: string; employee_no?: string; name?: string }
-    if (o.access_token && o.employee_no && o.name) {
-      return { access_token: o.access_token, employee_no: o.employee_no, name: o.name }
+    const o = JSON.parse(raw) as {
+      access_token?: string
+      refresh_token?: string
+      employee_no?: string
+      name?: string
+    }
+    if (o.access_token && o.refresh_token && o.employee_no && o.name) {
+      return {
+        access_token: o.access_token,
+        refresh_token: o.refresh_token,
+        employee_no: o.employee_no,
+        name: o.name,
+      }
     }
   } catch {
     /* ignore */
@@ -60,8 +127,8 @@ export function readSession(): MobileSession | null {
   return null
 }
 
-export function saveSession(access_token: string, employee_no: string, name: string) {
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ access_token, employee_no, name }))
+export function saveSession(access_token: string, refresh_token: string, employee_no: string, name: string) {
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ access_token, refresh_token, employee_no, name }))
 }
 
 export function clearSession() {

@@ -85,13 +85,14 @@ function wireLoginForm() {
       if (nameTrim) loginBody.name = nameTrim
       const r = await apiMobileJson<{
         access_token: string
+        refresh_token: string
         employee_no: string
         name: string
       }>('/api/auth/login', {
         method: 'POST',
         body: JSON.stringify(loginBody),
       })
-      saveSession(r.access_token, r.employee_no, r.name)
+      saveSession(r.access_token, r.refresh_token, r.employee_no, r.name)
       clearAuthFormFields()
       window.location.replace(ATTEND_PAGE)
     } catch (e) {

@@ -34,6 +34,7 @@ from backend.routes import (
 from backend.schema_ensure import (
     ensure_employee_auth_columns,
     ensure_employee_leave_tables,
+    ensure_mobile_refresh_tokens_table,
     ensure_work_shift_types_table,
 )
 
@@ -73,6 +74,9 @@ async def _lifespan(app: FastAPI):
             if ensure_work_shift_types_table(conn):
                 conn.commit()
                 logger.warning("근무시간 유형 테이블(work_shift_types)을 생성했습니다.")
+            if ensure_mobile_refresh_tokens_table(conn):
+                conn.commit()
+                logger.warning("리프레시 토큰 테이블(mobile_refresh_tokens)을 생성했습니다.")
         except Exception as e:  # noqa: BLE001
             conn.rollback()
             logger.error("스키마 보강 실패 (DB 확인): %s", e)

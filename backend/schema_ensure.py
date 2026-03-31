@@ -132,3 +132,35 @@ def ensure_work_shift_types_table(conn: Connection) -> bool:
         """
     )
     return True
+
+
+def ensure_mobile_refresh_tokens_table(conn: Connection) -> bool:
+    """mobile_refresh_tokens 없으면 생성."""
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT TABLE_NAME FROM information_schema.TABLES
+        WHERE TABLE_SCHEMA = DATABASE() AND LOWER(TABLE_NAME) = 'mobile_refresh_tokens'
+        """
+    )
+    if cur.fetchone():
+        return False
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS mobile_refresh_tokens (
+          id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+          employee_id BIGINT UNSIGNED NOT NULL,
+          token_hash CHAR(64) NOT NULL COMMENT 'SHA-256(refresh_token)',
+          expires_at DATETIME(3) NOT NULL,
+          revoked_at DATETIME(3) NULL,
+          created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+          PRIMARY KEY (id),
+          UNIQUE KEY uk_mrt_token_hash (token_hash),
+          KEY idx_mrt_employee (employee_id),
+          KEY idx_mrt_expires (expires_at),
+          CONSTRAINT fk_mrt_employee FOREIGN KEY (employee_id) REFERENCES employees (id)
+            ON DELETE CASCADE ON UPDATE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """
+    )
+    return True

@@ -19,7 +19,7 @@ def get_mobile_employee_id(cred: HTTPAuthorizationCredentials = Depends(_mobile_
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="유효하지 않은 토큰입니다.") from None
 
-    if payload.get("typ") != "mobile":
+    if payload.get("typ") not in ("mobile_access", "mobile"):
         raise HTTPException(status_code=401, detail="유효하지 않은 토큰입니다.")
 
     try:

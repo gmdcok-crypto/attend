@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
+import os
+import secrets
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import jwt
@@ -10,7 +14,12 @@ from fastapi.security import HTTPBearer
 from pydantic import BaseModel, Field
 
 from backend.database import Connection, DictCursor, get_db
-from backend.mobile_jwt import create_mobile_access_token, decode_mobile_access_token
+from backend.mobile_jwt import (
+    create_mobile_access_token,
+    create_mobile_refresh_token,
+    decode_mobile_access_token,
+    decode_mobile_refresh_token,
+)
 from backend.passwords import hash_password, verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -31,6 +40,45 @@ class LoginBody(BaseModel):
         default=None,
         description="최초 로그인(비밀번호 미설정) 시 사원관리 등록 성명과 동일하게 입력.",
     )
+
+
+class RefreshBody(BaseModel):
+    refresh_token: str = Field(..., min_length=1)
+
+
+def _now_utc_naive() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _refresh_expire_at() -> datetime:
+    days = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "14"))
+    return _now_utc_naive() + timedelta(days=days)
+
+
+def _hash_refresh_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _issue_tokens(conn: Connection, emp_id: int, employee_no: str) -> dict:
+    access = create_mobile_access_token(emp_id, employee_no)
+    jti = secrets.token_urlsafe(24)
+    refresh = create_mobile_refresh_token(emp_id, employee_no, jti=jti)
+    token_hash = _hash_refresh_token(refresh)
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO mobile_refresh_tokens (employee_id, token_hash, expires_at)
+        VALUES (%s, %s, %s)
+        """,
+        (emp_id, token_hash, _refresh_expire_at()),
+    )
+    conn.commit()
+    return {
+        "access_token": access,
+        "refresh_token": refresh,
+        "token_type": "bearer",
+        "access_expires_in": int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")) * 60,
+    }
 
 
 def _serialize_me(row: dict) -> dict:
@@ -92,22 +140,20 @@ def set_first_password(body: FirstPasswordBody, conn: Connection = Depends(get_d
     if cur.rowcount == 0:
         raise HTTPException(status_code=500, detail="저장에 실패했습니다.")
 
-    token = create_mobile_access_token(emp_id, row["employee_no"])
+    tokens = _issue_tokens(conn, emp_id, row["employee_no"])
     return {
         "ok": True,
-        "access_token": token,
-        "token_type": "bearer",
+        **tokens,
         "employee_no": row["employee_no"],
         "name": (row.get("name") or "").strip(),
     }
 
 
-def _login_response(emp_id: int, employee_no: str, display_name: str, auth_s: str) -> dict:
-    token = create_mobile_access_token(emp_id, employee_no)
+def _login_response(conn: Connection, emp_id: int, employee_no: str, display_name: str, auth_s: str) -> dict:
+    tokens = _issue_tokens(conn, emp_id, employee_no)
     return {
         "ok": True,
-        "access_token": token,
-        "token_type": "bearer",
+        **tokens,
         "employee_no": employee_no,
         "name": display_name,
         "auth_status": auth_s,
@@ -159,7 +205,7 @@ def mobile_login(body: LoginBody, conn: Connection = Depends(get_db)) -> dict:
                 status_code=409,
                 detail="비밀번호가 이미 설정되었습니다. 이름 입력 없이 비밀번호만으로 다시 로그인하세요.",
             )
-        return _login_response(emp_id, row["employee_no"], display_name, "O")
+        return _login_response(conn, emp_id, row["employee_no"], display_name, "O")
 
     if not verify_password(body.password, ph):
         raise HTTPException(status_code=401, detail=msg_bad)
@@ -171,7 +217,84 @@ def mobile_login(body: LoginBody, conn: Connection = Depends(get_db)) -> dict:
     if auth_s not in ("O", "X"):
         auth_s = "X"
 
-    return _login_response(emp_id, row["employee_no"], display_name, auth_s)
+    return _login_response(conn, emp_id, row["employee_no"], display_name, auth_s)
+
+
+@router.post("/refresh")
+def refresh_access_token(body: RefreshBody, conn: Connection = Depends(get_db)) -> dict:
+    token = body.refresh_token.strip()
+    if not token:
+        raise HTTPException(status_code=400, detail="리프레시 토큰이 필요합니다.")
+    try:
+        payload = decode_mobile_refresh_token(token)
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="리프레시 토큰이 만료되었습니다.") from None
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="유효하지 않은 리프레시 토큰입니다.") from None
+
+    if payload.get("typ") != "mobile_refresh":
+        raise HTTPException(status_code=401, detail="유효하지 않은 리프레시 토큰입니다.")
+    try:
+        emp_id = int(payload.get("sub") or 0)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=401, detail="유효하지 않은 리프레시 토큰입니다.") from None
+
+    token_hash = _hash_refresh_token(token)
+    cur = conn.cursor(DictCursor)
+    cur.execute(
+        """
+        SELECT id, employee_id, revoked_at, expires_at
+        FROM mobile_refresh_tokens
+        WHERE token_hash=%s
+        LIMIT 1
+        """,
+        (token_hash,),
+    )
+    row = cur.fetchone()
+    if not row or int(row["employee_id"]) != emp_id:
+        raise HTTPException(status_code=401, detail="유효하지 않은 리프레시 토큰입니다.")
+    if row.get("revoked_at") is not None:
+        raise HTTPException(status_code=401, detail="이미 사용된 리프레시 토큰입니다.")
+    exp_at = row.get("expires_at")
+    if exp_at and hasattr(exp_at, "timestamp") and exp_at.timestamp() < _now_utc_naive().timestamp():
+        raise HTTPException(status_code=401, detail="리프레시 토큰이 만료되었습니다.")
+
+    cur.execute(
+        """
+        SELECT id, employee_no, name, auth_status
+        FROM employees
+        WHERE id = %s
+        LIMIT 1
+        """,
+        (emp_id,),
+    )
+    emp = cur.fetchone()
+    if not emp:
+        raise HTTPException(status_code=401, detail="사원을 찾을 수 없습니다.")
+
+    # Rotation: invalidate used refresh token and issue new pair.
+    cur2 = conn.cursor()
+    cur2.execute(
+        """
+        UPDATE mobile_refresh_tokens
+        SET revoked_at=%s
+        WHERE id=%s AND revoked_at IS NULL
+        """,
+        (_now_utc_naive(), int(row["id"])),
+    )
+    if cur2.rowcount == 0:
+        conn.rollback()
+        raise HTTPException(status_code=401, detail="이미 사용된 리프레시 토큰입니다.")
+    conn.commit()
+
+    tokens = _issue_tokens(conn, emp_id, str(emp["employee_no"]))
+    return {
+        "ok": True,
+        **tokens,
+        "employee_no": str(emp["employee_no"]),
+        "name": str(emp.get("name") or ""),
+        "auth_status": str(emp.get("auth_status") or "X"),
+    }
 
 
 @router.get("/me")
@@ -187,7 +310,7 @@ def auth_me(
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="유효하지 않은 토큰입니다.") from None
 
-    if payload.get("typ") != "mobile":
+    if payload.get("typ") not in ("mobile_access", "mobile"):
         raise HTTPException(status_code=401, detail="유효하지 않은 토큰입니다.")
 
     try:
