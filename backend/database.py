@@ -42,12 +42,52 @@ def _parse_mysql_url(url: str) -> tuple[str, int, str, str, str] | None:
     return parsed.hostname, port, user, password, db
 
 
-def _resolve_db_params() -> tuple[str, int, str, str, str]:
-    """우선순위: DATABASE_URL / MYSQL_URL → DB_* → Railway MYSQL_*."""
-    for key in ("DATABASE_URL", "MYSQL_URL", "MYSQL_PRIVATE_URL", "MYSQL_PUBLIC_URL"):
+def _find_mysql_url_anywhere() -> tuple[str, int, str, str, str] | None:
+    """Railway 등에서 MYSQL_URL 이름이 다르거나, 값만 mysql:// 인 변수가 있을 때."""
+    url_keys = (
+        "DATABASE_URL",
+        "MYSQL_URL",
+        "MYSQL_PRIVATE_URL",
+        "MYSQL_PUBLIC_URL",
+        "MYSQLURL",
+        "DATABASE_PRIVATE_URL",
+        "DATABASE_PUBLIC_URL",
+    )
+    for key in url_keys:
         parsed = _parse_mysql_url(os.getenv(key, ""))
         if parsed is not None:
             return parsed
+    for _k, v in os.environ.items():
+        if not v or len(v) < 15:
+            continue
+        if not v.startswith(("mysql://", "mariadb://")):
+            continue
+        parsed = _parse_mysql_url(v)
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def _db_related_keys_hint() -> str:
+    """비밀값 없이 어떤 DB 관련 키가 있는지(이름만)."""
+    names = sorted(
+        k
+        for k in os.environ
+        if any(
+            x in k.upper()
+            for x in ("MYSQL", "DATABASE", "DB_", "MARIA", "SQL")
+        )
+    )
+    if not names:
+        return "(DB 관련 환경 변수 이름이 하나도 없습니다.)"
+    return ", ".join(names[:40]) + ("…" if len(names) > 40 else "")
+
+
+def _resolve_db_params() -> tuple[str, int, str, str, str]:
+    """우선순위: 아무 mysql:// URL → DB_* → Railway MYSQL*."""
+    parsed = _find_mysql_url_anywhere()
+    if parsed is not None:
+        return parsed
 
     host = (
         os.getenv("DB_HOST")
@@ -66,25 +106,31 @@ def _resolve_db_params() -> tuple[str, int, str, str, str]:
     except ValueError:
         port = 3306
 
-    user = os.getenv("DB_USER") or os.getenv("MYSQLUSER") or os.getenv("MYSQL_USER")
+    user = (
+        os.getenv("DB_USER")
+        or os.getenv("MYSQLUSER")
+        or os.getenv("MYSQL_USER")
+        or os.getenv("MYSQL_USERNAME")
+    )
     password = _env_first("DB_PASSWORD", "MYSQLPASSWORD", "MYSQL_PASSWORD")
     database = _env_first("DB_NAME", "MYSQL_DATABASE", "MYSQLDATABASE")
 
     if not user:
         raise RuntimeError(
-            "DB 사용자가 설정되지 않았습니다. "
-            "Railway Variables 에 DB_USER 또는 MYSQLUSER 를 설정하거나, "
-            "MySQL 플러그인을 서비스에 연결해 MYSQL_* 변수를 주입하세요."
+            "DB 사용자(DB_USER / MYSQLUSER)가 없습니다. "
+            "Railway 웹(API) 서비스 → Variables 에서 MySQL 서비스 변수를 참조로 추가하세요 "
+            "(예: MYSQLUSER, MYSQLPASSWORD, MYSQLHOST, MYSQLDATABASE 또는 MYSQL_URL). "
+            f"현재 감지된 관련 키: {_db_related_keys_hint()}"
         )
     if password is None:
         raise RuntimeError(
-            "DB 비밀번호가 설정되지 않았습니다. "
-            "DB_PASSWORD 또는 MYSQLPASSWORD 를 설정하세요."
+            "DB 비밀번호(DB_PASSWORD / MYSQLPASSWORD)가 없습니다. "
+            f"현재 감지된 관련 키: {_db_related_keys_hint()}"
         )
     if not database:
         raise RuntimeError(
-            "DB 이름이 설정되지 않았습니다. "
-            "DB_NAME 또는 MYSQL_DATABASE(MYSQLDATABASE) 를 설정하세요."
+            "DB 이름(DB_NAME / MYSQL_DATABASE)이 없습니다. "
+            f"현재 감지된 관련 키: {_db_related_keys_hint()}"
         )
 
     return host, port, user, password, database
