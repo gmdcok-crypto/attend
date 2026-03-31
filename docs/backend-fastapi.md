@@ -35,4 +35,6 @@ Python에서는 **MariaDB 공식 Connector/Python** (`requirements.txt` 의 `mar
 
 ## Railway 배포 시
 
-Uvicorn으로 `backend.main:app` 을 실행하면 된다. 포트는 플랫폼이 주는 `PORT` 환경 변수에 맞추면 된다 (별도 설정 필요 시 `Procfile` 또는 Railway 설정에서 명령만 조정).
+Uvicorn으로 `backend.main:app` 을 실행하면 된다. 포트는 플랫폼이 주는 `PORT` 환경 변수에 맞추면 된다.
+
+**Railway 전체 절차·DB 사설 엔드포인트·환경 변수 표는 `docs/railway-deploy.md` 를 참조한다.**
