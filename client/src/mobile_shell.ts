@@ -1,8 +1,17 @@
 /**
  * 출근·스캔·기록 UI (attend.html 전용). DOM 주입 후 wireAttendApp 호출.
  */
-import { startAttendQrScanner, stopAttendQrScanner } from './mobile_qr_scan'
 import { apiMobileJson, clearSession, readSession, INDEX_PAGE } from './mobile_session'
+
+type QrScanModule = typeof import('./mobile_qr_scan')
+let qrScanModulePromise: Promise<QrScanModule> | null = null
+
+function getQrScanModule(): Promise<QrScanModule> {
+  if (!qrScanModulePromise) {
+    qrScanModulePromise = import('./mobile_qr_scan')
+  }
+  return qrScanModulePromise
+}
 
 export function attendAppMarkup(): string {
   return `
@@ -202,7 +211,7 @@ function setScreen(name: string) {
   if (from === 'scan' && name !== 'scan') {
     pendingIntent = null
     updateScanCopy()
-    void stopAttendQrScanner()
+    void getQrScanModule().then((m) => m.stopAttendQrScanner())
     const errEl = document.getElementById('scan-err')
     if (errEl) {
       errEl.hidden = true
@@ -297,7 +306,8 @@ async function beginScanFlow() {
   if (errEl && !errEl.textContent) {
     errEl.hidden = true
   }
-  await startAttendQrScanner(
+  const qrScan = await getQrScanModule()
+  await qrScan.startAttendQrScanner(
     (text) => void handleDecodedQr(text),
     (msg) => {
       if (errEl) {

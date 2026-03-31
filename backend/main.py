@@ -12,6 +12,7 @@ from typing import Union
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -90,6 +91,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(GZipMiddleware, minimum_size=1024)
+
+
+@app.middleware("http")
+async def static_cache_control(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/assets/"):
+        # Vite hashes asset filenames, so immutable cache is safe.
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    elif path.endswith(".html") or path == "/":
+        # Always revalidate HTML so newly deployed bundles are picked up quickly.
+        response.headers["Cache-Control"] = "no-cache"
+    return response
 
 app.include_router(auth_mobile.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
