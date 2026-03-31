@@ -31,6 +31,8 @@ export async function startAttendQrScanner(
   onFail?: (message: string) => void,
 ): Promise<void> {
   await stopAttendQrScanner()
+  // Some mobile browsers keep camera handle briefly after stop().
+  await new Promise((resolve) => setTimeout(resolve, 120))
   if (!document.getElementById('qr-reader')) {
     onFail?.('스캔 영역을 찾을 수 없습니다.')
     return
@@ -54,22 +56,41 @@ export async function startAttendQrScanner(
       return
     }
     const back = cams.find((c) => /back|rear|environment|후면/i.test(c.label))
-    const cameraId = back?.id ?? cams[0].id
+    const tried = new Set<string>()
+    const candidates: Array<string | MediaTrackConstraints> = [
+      { facingMode: { ideal: 'environment' } },
+      ...(back ? [back.id] : []),
+      ...cams.map((c) => c.id),
+    ].filter((c) => {
+      if (typeof c !== 'string') return true
+      if (tried.has(c)) return false
+      tried.add(c)
+      return true
+    })
 
-    await html5.start(
-      cameraId,
-      {
-        fps: 10,
-        qrbox: (viewW, viewH) => {
-          const edge = Math.min(viewW, viewH, SCAN_BOX_EDGE)
-          return { width: edge, height: edge }
-        },
-      },
-      (decoded) => finish(decoded),
-      () => {
-        /* 매 프레임 — 무시 */
-      },
-    )
+    let lastErr: unknown = null
+    for (const cam of candidates) {
+      try {
+        await html5.start(
+          cam,
+          {
+            fps: 10,
+            qrbox: (viewW, viewH) => {
+              const edge = Math.min(viewW, viewH, SCAN_BOX_EDGE)
+              return { width: edge, height: edge }
+            },
+          },
+          (decoded) => finish(decoded),
+          () => {
+            /* 매 프레임 — 무시 */
+          },
+        )
+        return
+      } catch (e) {
+        lastErr = e
+      }
+    }
+    throw lastErr ?? new Error('could not start video source')
   } catch (e) {
     current = null
     try {
@@ -77,6 +98,11 @@ export async function startAttendQrScanner(
     } catch {
       /* */
     }
-    onFail?.(e instanceof Error ? e.message : String(e))
+    const msg = e instanceof Error ? e.message : String(e)
+    if (/could not start video source/i.test(msg)) {
+      onFail?.('카메라를 시작할 수 없습니다. 다른 앱의 카메라 사용을 종료하고 다시 시도해 주세요.')
+      return
+    }
+    onFail?.(msg)
   }
 }
