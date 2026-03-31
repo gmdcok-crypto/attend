@@ -89,18 +89,21 @@ def _resolve_db_params() -> tuple[str, int, str, str, str]:
     if parsed is not None:
         return parsed
 
-    host = (
-        os.getenv("DB_HOST")
-        or os.getenv("MYSQLHOST")
-        or os.getenv("MYSQL_HOST")
-        or "127.0.0.1"
-    )
-    port_str = (
-        os.getenv("DB_PORT")
-        or os.getenv("MYSQLPORT")
-        or os.getenv("MYSQL_PORT")
-        or "3306"
-    )
+    # Prefer Railway private networking when available. If DB_HOST points to a public proxy,
+    # override with MYSQLHOST/MYSQLPORT (internal) to reduce latency and instability.
+    db_host = os.getenv("DB_HOST")
+    mysql_host = os.getenv("MYSQLHOST") or os.getenv("MYSQL_HOST")
+    db_port = os.getenv("DB_PORT")
+    mysql_port = os.getenv("MYSQLPORT") or os.getenv("MYSQL_PORT")
+
+    host = db_host or mysql_host or "127.0.0.1"
+    port_str = db_port or mysql_port or "3306"
+
+    if mysql_host and db_host and db_host.endswith(".proxy.rlwy.net"):
+        host = mysql_host
+        if mysql_port:
+            port_str = mysql_port
+
     try:
         port = int(port_str)
     except ValueError:
@@ -145,6 +148,9 @@ def get_connection() -> Connection:
         password=password,
         database=database,
         charset="utf8mb4",
+        connect_timeout=5,
+        read_timeout=30,
+        write_timeout=30,
     )
 
 
