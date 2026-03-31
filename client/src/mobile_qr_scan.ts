@@ -4,6 +4,14 @@ let current: Html5Qrcode | null = null
 let stopChain: Promise<void> = Promise.resolve()
 const SCAN_BOX_EDGE = 300
 
+function applyScanFrameSize(edge: number): void {
+  const frame = document.querySelector<HTMLElement>('.scan-frame')
+  if (!frame) return
+  const px = `${Math.max(120, Math.floor(edge))}px`
+  frame.style.width = px
+  frame.style.height = px
+}
+
 export async function stopAttendQrScanner(): Promise<void> {
   stopChain = stopChain.then(async () => {
     if (!current) return
@@ -56,12 +64,19 @@ export async function startAttendQrScanner(
     const back = cams.find((c) => /back|rear|environment|후면/i.test(c.label))
     const cameraId = back?.id ?? cams[0].id
 
+    const host = document.getElementById('qr-reader')
+    if (host) {
+      const initialEdge = Math.min(host.clientWidth, host.clientHeight, SCAN_BOX_EDGE)
+      applyScanFrameSize(initialEdge)
+    }
+
     await html5.start(
       cameraId,
       {
         fps: 10,
         qrbox: (viewW, viewH) => {
           const edge = Math.min(viewW, viewH, SCAN_BOX_EDGE)
+          applyScanFrameSize(edge)
           return { width: edge, height: edge }
         },
       },
