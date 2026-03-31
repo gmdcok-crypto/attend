@@ -388,8 +388,6 @@ body {
   height: 220px;
   border: 3px solid rgba(255, 255, 255, 0.85);
   border-radius: 16px;
-  /* html5-qrcode 기본 가이드 박스와 시각적으로 중앙 정렬 보정 */
-  transform: translateY(-34px);
   box-shadow:
     0 0 0 9999px rgba(0, 0, 0, 0.45),
     inset 0 0 0 2px rgba(13, 148, 136, 0.6);

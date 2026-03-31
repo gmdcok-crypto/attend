@@ -2,6 +2,7 @@ import { Html5Qrcode } from 'html5-qrcode'
 
 let current: Html5Qrcode | null = null
 let stopChain: Promise<void> = Promise.resolve()
+const SCAN_BOX_EDGE = 220
 
 export async function stopAttendQrScanner(): Promise<void> {
   stopChain = stopChain.then(async () => {
@@ -60,7 +61,7 @@ export async function startAttendQrScanner(
       {
         fps: 10,
         qrbox: (viewW, viewH) => {
-          const edge = Math.min(viewW, viewH, 280)
+          const edge = Math.min(viewW, viewH, SCAN_BOX_EDGE)
           return { width: edge, height: edge }
         },
       },
