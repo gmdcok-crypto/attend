@@ -236,23 +236,11 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
                     <option value="퇴사">퇴사</option>
                   </select>
                 </div>
-                <div class="form-field form-field--row">
-                  <label for="emp-mobile-pw">모바일 로그인 비밀번호</label>
-                  <input
-                    type="password"
-                    id="emp-mobile-pw"
-                    autocomplete="new-password"
-                    placeholder="사원 선택 후 등록"
-                  />
-                </div>
               </div>
               <div class="form-actions">
                 <button type="button" class="btn btn-primary" id="emp-btn-add">추가</button>
                 <button type="button" class="btn btn-update" id="emp-btn-update">수정</button>
                 <button type="button" class="btn btn-danger" id="emp-btn-delete">삭제</button>
-                <button type="button" class="btn btn-update" id="emp-btn-reset-mobile-pw">
-                  비밀번호 등록·재설정
-                </button>
               </div>
             </div>
             </div>
@@ -1245,29 +1233,6 @@ function wireCrudEmployees() {
         h.value = ''
         st.value = '재직'
         adminAlert('삭제되었습니다.')
-      })
-      .catch((err) => adminAlert(String(err)))
-  })
-
-  bindButtonById('emp-btn-reset-mobile-pw', '사원 화면', () => {
-    if (!selected?.dataset.id) {
-      adminAlert('비밀번호를 등록할 사원 행을 먼저 선택하세요.')
-      return
-    }
-    const pwEl = document.getElementById('emp-mobile-pw') as HTMLInputElement | null
-    const new_password = pwEl?.value?.trim() ?? ''
-    if (!new_password) {
-      adminAlert('비밀번호를 입력하세요.')
-      return
-    }
-    const id = selected.dataset.id
-    apiJson(`/api/employees/${id}/reset-password`, {
-      method: 'POST',
-      body: JSON.stringify({ new_password }),
-    })
-      .then(() => {
-        if (pwEl) pwEl.value = ''
-        adminAlert('모바일 로그인 비밀번호가 저장되었습니다.')
       })
       .catch((err) => adminAlert(String(err)))
   })
