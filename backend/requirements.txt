@@ -2,6 +2,8 @@ fastapi>=0.115.0
 uvicorn[standard]>=0.32.0
 # PyMySQL — 순수 Python (Railway/Nixpacks 에서 mariadb 네이티브 빌드 불필요)
 PyMySQL>=1.1.0
+# MySQL 8+ caching_sha2_password / sha256_password 인증에 필요
+cryptography>=42.0.0
 python-dotenv>=1.0.0
 bcrypt>=4.0.0
 PyJWT>=2.8.0
