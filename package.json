@@ -7,7 +7,7 @@
     "dev": "vite",
     "dev:api": "python -m uvicorn backend.main:app --reload --reload-dir backend --host 127.0.0.1 --port 8000",
     "db:schema": "python scripts/apply_schema.py",
-    "build": "tsc && vite build",
+    "build": "node scripts/build.mjs",
     "preview": "vite preview"
   },
   "devDependencies": {

@@ -1,8 +1,10 @@
-# Railway 프로젝트 gs_attend — 백엔드(FastAPI) 배포용
+# Railway 프로젝트 gs_attend — API만 배포 (Docker 미사용 · Nixpacks)
 # https://docs.railway.com/reference/config-as-code
 
 [build]
-builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile"
+builder = "nixpacks"
+# 루트에 package.json 이 있어도 Vite/tsc 는 돌리지 않음 (Node 18 이슈 방지)
+buildCommand = "pip install --no-cache-dir -r requirements.txt"
 
-# 런타임은 Dockerfile CMD 사용 (deploy.startCommand 생략)
+[deploy]
+startCommand = "uvicorn backend.main:app --host 0.0.0.0 --port $PORT"
