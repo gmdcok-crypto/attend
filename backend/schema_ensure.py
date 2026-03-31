@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import mariadb
+from pymysql.connections import Connection
 
 
-def ensure_employee_auth_columns(conn: mariadb.Connection) -> bool:
+def ensure_employee_auth_columns(conn: Connection) -> bool:
     """
     employees.password_hash, employees.auth_status 가 없으면 ALTER 로 추가.
     Returns True if at least one ALTER was executed.
@@ -42,7 +42,7 @@ def ensure_employee_auth_columns(conn: mariadb.Connection) -> bool:
     return changed
 
 
-def ensure_employee_leave_tables(conn: mariadb.Connection) -> bool:
+def ensure_employee_leave_tables(conn: Connection) -> bool:
     """employee_leave_records / employee_leave_quotas 없으면 생성."""
     cur = conn.cursor()
     cur.execute(
@@ -104,7 +104,7 @@ def ensure_employee_leave_tables(conn: mariadb.Connection) -> bool:
     return changed
 
 
-def ensure_work_shift_types_table(conn: mariadb.Connection) -> bool:
+def ensure_work_shift_types_table(conn: Connection) -> bool:
     """work_shift_types 없으면 생성."""
     cur = conn.cursor()
     cur.execute(

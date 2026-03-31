@@ -1,10 +1,10 @@
 """
-Apply sql/*.sql (sorted by filename) to MariaDB using MariaDB Connector/Python.
+Apply sql/*.sql (sorted by filename) to MariaDB using PyMySQL.
 
 Usage (from project root):
   python scripts/apply_schema.py
 
-Requires: pip install -r backend/requirements.txt (mariadb, python-dotenv)
+Requires: pip install -r backend/requirements.txt (PyMySQL, python-dotenv)
 Loads:    .env in project root (DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME)
 """
 
@@ -60,14 +60,15 @@ def main() -> None:
         print(f"ERROR: no SQL files in {SQL_DIR}", file=sys.stderr)
         sys.exit(1)
 
-    import mariadb
+    import pymysql
 
-    conn = mariadb.connect(
+    conn = pymysql.connect(
         host=os.getenv("DB_HOST", "127.0.0.1"),
         port=int(os.getenv("DB_PORT", "3306")),
         user=_require_env("DB_USER"),
         password=_require_env("DB_PASSWORD"),
         database=_require_env("DB_NAME"),
+        charset="utf8mb4",
     )
 
     try:

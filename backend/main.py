@@ -1,4 +1,4 @@
-"""근태 API — MariaDB(공식 커넥터) + KST 세션"""
+"""근태 API — MariaDB(PyMySQL) + KST 세션"""
 
 from __future__ import annotations
 
@@ -8,7 +8,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Union
 
-import mariadb
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,7 +15,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.requests import Request
 
-from backend.database import get_connection
+from backend.database import DictCursor, get_connection
 from backend.routes import (
     attendance,
     attendance_clock,
@@ -105,7 +104,7 @@ def health() -> dict:
         "ok": True,
         "service": "attend-api",
         "stack": "fastapi",
-        "dbConnector": "mariadb (MariaDB Connector/Python)",
+        "dbConnector": "PyMySQL",
     }
 
 
@@ -114,7 +113,7 @@ def db_ping() -> Union[dict, JSONResponse]:
     try:
         conn = get_connection()
         try:
-            cur = conn.cursor(dictionary=True)
+            cur = conn.cursor(DictCursor)
             cur.execute("SET time_zone = '+09:00'")
             cur.execute("SELECT NOW() AS db_now, @@session.time_zone AS tz")
             row = cur.fetchone()

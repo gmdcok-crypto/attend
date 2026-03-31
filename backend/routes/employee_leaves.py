@@ -3,11 +3,10 @@ from __future__ import annotations
 from datetime import date, timedelta
 from typing import Optional
 
-import mariadb
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from backend.database import get_db
+from backend.database import Connection, DictCursor, get_db
 
 router = APIRouter(prefix="/employee-leaves", tags=["employee-leaves"])
 
@@ -44,8 +43,8 @@ def _workdays(a: date, b: date) -> int:
     return n
 
 
-def _resolve_employee_id(conn: mariadb.Connection, employee_no: str) -> Optional[int]:
-    cur = conn.cursor(dictionary=True)
+def _resolve_employee_id(conn: Connection, employee_no: str) -> Optional[int]:
+    cur = conn.cursor(DictCursor)
     cur.execute(
         "SELECT id FROM employees WHERE employee_no = %s LIMIT 1",
         (employee_no.strip(),),
@@ -55,11 +54,11 @@ def _resolve_employee_id(conn: mariadb.Connection, employee_no: str) -> Optional
 
 
 def _load_all_records_for_aggregate(
-    conn: mariadb.Connection, employee_ids: list[int]
+    conn: Connection, employee_ids: list[int]
 ) -> list[dict]:
     if not employee_ids:
         return []
-    cur = conn.cursor(dictionary=True)
+    cur = conn.cursor(DictCursor)
     placeholders = ",".join(["%s"] * len(employee_ids))
     cur.execute(
         f"""
@@ -91,8 +90,8 @@ def _aggregate_workdays_by_year(rows: list[dict]) -> dict[tuple[int, int, int], 
     return out
 
 
-def _load_quotas(conn: mariadb.Connection) -> dict[tuple[int, int, int], float]:
-    cur = conn.cursor(dictionary=True)
+def _load_quotas(conn: Connection) -> dict[tuple[int, int, int], float]:
+    cur = conn.cursor(DictCursor)
     cur.execute(
         "SELECT employee_id, leave_code_id, year_year, quota_days FROM employee_leave_quotas"
     )
@@ -140,12 +139,12 @@ def _serialize_row(
 
 @router.get("")
 def list_employee_leaves(
-    conn: mariadb.Connection = Depends(get_db),
+    conn: Connection = Depends(get_db),
     date_from: Optional[str] = Query(None, alias="date_from"),
     date_to: Optional[str] = Query(None, alias="date_to"),
     q: Optional[str] = Query(None, description="사번·성명 부분 검색"),
 ) -> list[dict]:
-    cur = conn.cursor(dictionary=True)
+    cur = conn.cursor(DictCursor)
     clauses: list[str] = ["1=1"]
     params: list[object] = []
 
@@ -187,7 +186,7 @@ def list_employee_leaves(
 
 
 @router.post("", status_code=201)
-def create_employee_leave(body: EmployeeLeaveCreate, conn: mariadb.Connection = Depends(get_db)) -> dict:
+def create_employee_leave(body: EmployeeLeaveCreate, conn: Connection = Depends(get_db)) -> dict:
     emp_id = _resolve_employee_id(conn, body.employee_no)
     if emp_id is None:
         raise HTTPException(status_code=400, detail="해당 사번의 사원을 찾을 수 없습니다.")
@@ -212,7 +211,7 @@ def create_employee_leave(body: EmployeeLeaveCreate, conn: mariadb.Connection = 
 
 @router.put("/{record_id}")
 def update_employee_leave(
-    record_id: int, body: EmployeeLeaveUpdate, conn: mariadb.Connection = Depends(get_db)
+    record_id: int, body: EmployeeLeaveUpdate, conn: Connection = Depends(get_db)
 ) -> dict:
     emp_id = _resolve_employee_id(conn, body.employee_no)
     if emp_id is None:
@@ -240,7 +239,7 @@ def update_employee_leave(
 
 
 @router.delete("/{record_id}", status_code=204)
-def delete_employee_leave(record_id: int, conn: mariadb.Connection = Depends(get_db)) -> None:
+def delete_employee_leave(record_id: int, conn: Connection = Depends(get_db)) -> None:
     cur = conn.cursor()
     cur.execute("DELETE FROM employee_leave_records WHERE id=%s", (record_id,))
     conn.commit()

@@ -4,13 +4,12 @@ from __future__ import annotations
 
 from typing import Optional
 
-import mariadb
 import jwt
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPBearer
 from pydantic import BaseModel, Field
 
-from backend.database import get_db
+from backend.database import Connection, DictCursor, get_db
 from backend.mobile_jwt import create_mobile_access_token, decode_mobile_access_token
 from backend.passwords import hash_password, verify_password
 
@@ -56,11 +55,11 @@ def _serialize_me(row: dict) -> dict:
 
 
 @router.post("/first-password")
-def set_first_password(body: FirstPasswordBody, conn: mariadb.Connection = Depends(get_db)) -> dict:
+def set_first_password(body: FirstPasswordBody, conn: Connection = Depends(get_db)) -> dict:
     """미등록(해시 없음) 사원만: 사번·성명 확인 후 비밀번호 설정 및 인증 완료."""
     no = body.employee_no.strip()
     name = body.name.strip()
-    cur = conn.cursor(dictionary=True)
+    cur = conn.cursor(DictCursor)
     cur.execute(
         """
         SELECT id, employee_no, name, password_hash, auth_status
@@ -116,10 +115,10 @@ def _login_response(emp_id: int, employee_no: str, display_name: str, auth_s: st
 
 
 @router.post("/login")
-def mobile_login(body: LoginBody, conn: mariadb.Connection = Depends(get_db)) -> dict:
+def mobile_login(body: LoginBody, conn: Connection = Depends(get_db)) -> dict:
     """비밀번호 미설정 시 최초 1회: 이름 일치하면 입력 비밀번호를 DB에 저장 후 토큰 발급. 이후는 사번·비밀번호만."""
     no = body.employee_no.strip()
-    cur = conn.cursor(dictionary=True)
+    cur = conn.cursor(DictCursor)
     cur.execute(
         """
         SELECT id, employee_no, name, password_hash, auth_status
@@ -178,7 +177,7 @@ def mobile_login(body: LoginBody, conn: mariadb.Connection = Depends(get_db)) ->
 @router.get("/me")
 def auth_me(
     cred: HTTPAuthorizationCredentials = Depends(bearer_scheme),
-    conn: mariadb.Connection = Depends(get_db),
+    conn: Connection = Depends(get_db),
 ) -> dict:
     """Bearer JWT로 현재 사원 정보 (토큰 유효성·만료 검증)."""
     try:
@@ -196,7 +195,7 @@ def auth_me(
     except (TypeError, ValueError):
         raise HTTPException(status_code=401, detail="유효하지 않은 토큰입니다.") from None
 
-    cur = conn.cursor(dictionary=True)
+    cur = conn.cursor(DictCursor)
     cur.execute(
         """
         SELECT e.id, e.employee_no, e.name, e.hire_date, e.status, e.auth_status, d.name AS department_name

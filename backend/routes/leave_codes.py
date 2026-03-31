@@ -3,11 +3,10 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-import mariadb
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from backend.database import get_db
+from backend.database import Connection, DictCursor, IntegrityError, get_db
 
 router = APIRouter(prefix="/leave-codes", tags=["leave-codes"])
 
@@ -22,8 +21,8 @@ class LeaveCodeUpdate(BaseModel):
     name: str = Field(..., min_length=1)
 
 
-def _next_leave_code(conn: mariadb.Connection) -> str:
-    cur = conn.cursor(dictionary=True)
+def _next_leave_code(conn: Connection) -> str:
+    cur = conn.cursor(DictCursor)
     cur.execute("SELECT code FROM leave_codes")
     max_n = 0
     for row in cur.fetchall() or []:
@@ -36,14 +35,14 @@ def _next_leave_code(conn: mariadb.Connection) -> str:
 
 
 @router.get("")
-def list_leave_codes(conn: mariadb.Connection = Depends(get_db)) -> list[dict]:
-    cur = conn.cursor(dictionary=True)
+def list_leave_codes(conn: Connection = Depends(get_db)) -> list[dict]:
+    cur = conn.cursor(DictCursor)
     cur.execute("SELECT id, code, name FROM leave_codes ORDER BY code")
     return list(cur.fetchall() or [])
 
 
 @router.post("", status_code=201)
-def create_leave_code(body: LeaveCodeCreate, conn: mariadb.Connection = Depends(get_db)) -> dict:
+def create_leave_code(body: LeaveCodeCreate, conn: Connection = Depends(get_db)) -> dict:
     name = body.name.strip()
     code = (body.code or "").strip() or _next_leave_code(conn)
     try:
@@ -51,7 +50,7 @@ def create_leave_code(body: LeaveCodeCreate, conn: mariadb.Connection = Depends(
         cur.execute("INSERT INTO leave_codes (code, name) VALUES (%s, %s)", (code, name))
         conn.commit()
         new_id = cur.lastrowid
-    except mariadb.IntegrityError as e:
+    except IntegrityError as e:
         conn.rollback()
         raise HTTPException(status_code=409, detail=str(e)) from e
     return {"id": int(new_id), "code": code, "name": name}
@@ -59,7 +58,7 @@ def create_leave_code(body: LeaveCodeCreate, conn: mariadb.Connection = Depends(
 
 @router.put("/{leave_id}")
 def update_leave_code(
-    leave_id: int, body: LeaveCodeUpdate, conn: mariadb.Connection = Depends(get_db)
+    leave_id: int, body: LeaveCodeUpdate, conn: Connection = Depends(get_db)
 ) -> dict:
     cur = conn.cursor()
     cur.execute(
@@ -73,7 +72,7 @@ def update_leave_code(
 
 
 @router.delete("/{leave_id}", status_code=204)
-def delete_leave_code(leave_id: int, conn: mariadb.Connection = Depends(get_db)) -> None:
+def delete_leave_code(leave_id: int, conn: Connection = Depends(get_db)) -> None:
     cur = conn.cursor()
     cur.execute("DELETE FROM leave_codes WHERE id=%s", (leave_id,))
     conn.commit()

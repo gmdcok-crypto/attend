@@ -4,10 +4,9 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-import mariadb
 from fastapi import APIRouter, Depends
 
-from backend.database import get_db
+from backend.database import Connection, DictCursor, get_db
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -16,8 +15,8 @@ _LATE_CUTOFF_SEC = 9 * 3600
 
 
 @router.get("/summary")
-def dashboard_summary(conn: mariadb.Connection = Depends(get_db)) -> dict:
-    cur = conn.cursor(dictionary=True)
+def dashboard_summary(conn: Connection = Depends(get_db)) -> dict:
+    cur = conn.cursor(DictCursor)
     cur.execute("SET time_zone = '+09:00'")
     cur.execute("SELECT CURDATE() AS d")
     row = cur.fetchone()

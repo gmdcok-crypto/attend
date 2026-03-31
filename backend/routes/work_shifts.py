@@ -4,11 +4,10 @@ import re
 from datetime import datetime, time, timedelta
 from typing import Union
 
-import mariadb
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from backend.database import get_db
+from backend.database import Connection, DictCursor, get_db
 
 router = APIRouter(prefix="/work-shifts", tags=["work-shifts"])
 
@@ -65,8 +64,8 @@ def _serialize(row: dict) -> dict:
 
 
 @router.get("")
-def list_work_shifts(conn: mariadb.Connection = Depends(get_db)) -> list[dict]:
-    cur = conn.cursor(dictionary=True)
+def list_work_shifts(conn: Connection = Depends(get_db)) -> list[dict]:
+    cur = conn.cursor(DictCursor)
     cur.execute(
         """
         SELECT id, name, clock_in, clock_out, sort_order
@@ -78,14 +77,14 @@ def list_work_shifts(conn: mariadb.Connection = Depends(get_db)) -> list[dict]:
 
 
 @router.post("", status_code=201)
-def create_work_shift(body: WorkShiftCreate, conn: mariadb.Connection = Depends(get_db)) -> dict:
+def create_work_shift(body: WorkShiftCreate, conn: Connection = Depends(get_db)) -> dict:
     name = body.name.strip()
     try:
         tin = _parse_hhmm(body.clock_in)
         tout = _parse_hhmm(body.clock_out)
     except ValueError as e:
         raise HTTPException(status_code=400, detail="출근·퇴근 시각 형식은 HH:MM 입니다.") from e
-    cur = conn.cursor(dictionary=True)
+    cur = conn.cursor(DictCursor)
     cur.execute("SELECT COALESCE(MAX(sort_order), 0) + 1 AS n FROM work_shift_types")
     row = cur.fetchone()
     next_sort = int(row["n"]) if row else 1
@@ -103,7 +102,7 @@ def create_work_shift(body: WorkShiftCreate, conn: mariadb.Connection = Depends(
 
 @router.put("/{shift_id}")
 def update_work_shift(
-    shift_id: int, body: WorkShiftUpdate, conn: mariadb.Connection = Depends(get_db)
+    shift_id: int, body: WorkShiftUpdate, conn: Connection = Depends(get_db)
 ) -> dict:
     name = body.name.strip()
     try:
@@ -127,7 +126,7 @@ def update_work_shift(
 
 
 @router.delete("/{shift_id}", status_code=204)
-def delete_work_shift(shift_id: int, conn: mariadb.Connection = Depends(get_db)) -> None:
+def delete_work_shift(shift_id: int, conn: Connection = Depends(get_db)) -> None:
     cur = conn.cursor()
     cur.execute("DELETE FROM work_shift_types WHERE id=%s", (shift_id,))
     conn.commit()

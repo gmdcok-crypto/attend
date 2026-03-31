@@ -3,11 +3,10 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-import mariadb
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from backend.database import get_db
+from backend.database import Connection, DictCursor, IntegrityError, get_db
 
 router = APIRouter(prefix="/departments", tags=["departments"])
 
@@ -22,8 +21,8 @@ class DepartmentUpdate(BaseModel):
     name: str = Field(..., min_length=1)
 
 
-def _next_dept_code(conn: mariadb.Connection) -> str:
-    cur = conn.cursor(dictionary=True)
+def _next_dept_code(conn: Connection) -> str:
+    cur = conn.cursor(DictCursor)
     cur.execute("SELECT code FROM departments")
     max_n = 0
     for row in cur.fetchall() or []:
@@ -34,14 +33,14 @@ def _next_dept_code(conn: mariadb.Connection) -> str:
 
 
 @router.get("")
-def list_departments(conn: mariadb.Connection = Depends(get_db)) -> list[dict]:
-    cur = conn.cursor(dictionary=True)
+def list_departments(conn: Connection = Depends(get_db)) -> list[dict]:
+    cur = conn.cursor(DictCursor)
     cur.execute("SELECT id, code, name FROM departments ORDER BY code")
     return list(cur.fetchall() or [])
 
 
 @router.post("", status_code=201)
-def create_department(body: DepartmentCreate, conn: mariadb.Connection = Depends(get_db)) -> dict:
+def create_department(body: DepartmentCreate, conn: Connection = Depends(get_db)) -> dict:
     name = body.name.strip()
     code = (body.code or "").strip() or _next_dept_code(conn)
     try:
@@ -49,7 +48,7 @@ def create_department(body: DepartmentCreate, conn: mariadb.Connection = Depends
         cur.execute("INSERT INTO departments (code, name) VALUES (%s, %s)", (code, name))
         conn.commit()
         new_id = cur.lastrowid
-    except mariadb.IntegrityError as e:
+    except IntegrityError as e:
         conn.rollback()
         raise HTTPException(status_code=409, detail=str(e)) from e
     return {"id": int(new_id), "code": code, "name": name}
@@ -57,7 +56,7 @@ def create_department(body: DepartmentCreate, conn: mariadb.Connection = Depends
 
 @router.put("/{dept_id}")
 def update_department(
-    dept_id: int, body: DepartmentUpdate, conn: mariadb.Connection = Depends(get_db)
+    dept_id: int, body: DepartmentUpdate, conn: Connection = Depends(get_db)
 ) -> dict:
     cur = conn.cursor()
     cur.execute(
@@ -71,7 +70,7 @@ def update_department(
 
 
 @router.delete("/{dept_id}", status_code=204)
-def delete_department(dept_id: int, conn: mariadb.Connection = Depends(get_db)) -> None:
+def delete_department(dept_id: int, conn: Connection = Depends(get_db)) -> None:
     cur = conn.cursor()
     cur.execute("DELETE FROM departments WHERE id=%s", (dept_id,))
     conn.commit()

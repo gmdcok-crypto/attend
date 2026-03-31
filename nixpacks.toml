@@ -6,5 +6,5 @@
 NIXPACKS_PYTHON_VERSION = "3.12"
 
 [phases.setup]
-# mariadb (PyPI) 빌드에 Connector/C 의 mariadb_config 필요 — gcc 만으로는 부족
-nixPkgs = ["python312", "gcc", "mariadb-connector-c", "pkg-config"]
+# PyMySQL 은 순수 Python — Connector/C·gcc 불필요 (python 제공자 패키지 유지)
+nixPkgs = ["..."]

@@ -3,23 +3,22 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-import mariadb
 from fastapi import APIRouter, Depends, Query
 
-from backend.database import get_db
+from backend.database import Connection, DictCursor, get_db
 
 router = APIRouter(prefix="/attendance-events", tags=["attendance"])
 
 
 @router.get("")
 def list_attendance_events(
-    conn: mariadb.Connection = Depends(get_db),
+    conn: Connection = Depends(get_db),
     date_from: str = Query(..., description="YYYY-MM-DD"),
     date_to: str = Query(..., description="YYYY-MM-DD"),
     employee_id: Optional[int] = Query(None),
     employee_name: Optional[str] = Query(None),
 ) -> list[dict]:
-    cur = conn.cursor(dictionary=True)
+    cur = conn.cursor(DictCursor)
     cur.execute("SET time_zone = '+09:00'")
     name_like = f"%{employee_name.strip()}%" if employee_name and employee_name.strip() else None
 

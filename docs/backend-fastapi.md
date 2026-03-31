@@ -28,7 +28,7 @@ npm run dev:api
 
 ## DB 연결
 
-Python에서는 **MariaDB 공식 Connector/Python** (`requirements.txt` 의 `mariadb` 패키지, `import mariadb`)을 사용한다. PyMySQL이 아니다.
+Python에서는 **PyMySQL** (`requirements.txt` 의 `PyMySQL` 패키지)으로 MariaDB에 접속한다. Railway 등 Linux 빌드에서 네이티브 `mariadb` 패키지 빌드(Connector/C)를 피하기 위해 선택했다.
 
 ## 환경 변수
 

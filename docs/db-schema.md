@@ -50,7 +50,7 @@
 python scripts/apply_schema.py
 ```
 
-(`pip install -r backend/requirements.txt` 로 `mariadb`, `python-dotenv` 가 있어야 합니다.)
+(`pip install -r backend/requirements.txt` 로 `PyMySQL`, `python-dotenv` 가 있어야 합니다.)
 
 ### 2) CLI 클라이언트
 
@@ -66,4 +66,4 @@ mariadb -u attend -p attend < sql/001_init.sql
 
 ## Python API 쪽 연결
 
-FastAPI 백엔드는 **MariaDB 공식 Connector/Python** (`pip install mariadb`, 패키지 이름 `mariadb`)으로 접속합니다. 이전에 문서에 `mysql`만 적혀 있었다면, 그건 **CLI 도구 이름**을 가리킨 것이지 PyMySQL 드라이버를 쓰자는 뜻이 아닙니다.
+FastAPI 백엔드는 **PyMySQL** (`pip install PyMySQL`)으로 접속합니다. CLI의 `mariadb` / `mysql` 명령과는 별개입니다.

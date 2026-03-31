@@ -6,11 +6,10 @@ import json
 from datetime import datetime
 from typing import Any, Literal, Optional
 
-import mariadb
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from backend.database import get_db
+from backend.database import Connection, DictCursor, get_db
 from backend.deps_mobile import get_mobile_employee_id
 from backend.kiosk_qr import verify_kiosk_qr_payload
 
@@ -31,10 +30,10 @@ def _dt_iso(v: Any) -> str:
 @router.get("/today")
 def attendance_today(
     employee_id: int = Depends(get_mobile_employee_id),
-    conn: mariadb.Connection = Depends(get_db),
+    conn: Connection = Depends(get_db),
 ) -> dict:
     """오늘(KST) 본인 출퇴근 이벤트 요약."""
-    cur = conn.cursor(dictionary=True)
+    cur = conn.cursor(DictCursor)
     cur.execute("SET time_zone = '+09:00'")
     cur.execute(
         """
@@ -72,7 +71,7 @@ def clock_with_qr(
     body: ClockQrBody,
     request: Request,
     employee_id: int = Depends(get_mobile_employee_id),
-    conn: mariadb.Connection = Depends(get_db),
+    conn: Connection = Depends(get_db),
 ) -> dict:
     raw_s = body.qr.strip()
     try:
@@ -87,7 +86,7 @@ def clock_with_qr(
     intent = body.intent
     event_type = "IN" if intent == "in" else "OUT"
 
-    cur = conn.cursor(dictionary=True)
+    cur = conn.cursor(DictCursor)
     cur.execute("SET time_zone = '+09:00'")
     cur.execute(
         """
@@ -141,7 +140,7 @@ def clock_with_qr(
     new_id = ins.lastrowid
     conn.commit()
 
-    cur_sel = conn.cursor(dictionary=True)
+    cur_sel = conn.cursor(DictCursor)
     cur_sel.execute(
         "SELECT occurred_at FROM attendance_events WHERE id = %s",
         (new_id,),
