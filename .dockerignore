@@ -2,7 +2,9 @@
 # 권장: 대시보드 Build → Builder = Nixpacks (Dockerfile 미사용)
 .git
 node_modules
+client/node_modules
 dist
+client/dist
 .venv
 venv
 __pycache__

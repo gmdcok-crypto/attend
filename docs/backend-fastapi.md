@@ -12,9 +12,10 @@ python -m pip install -r backend/requirements.txt
 
 ## 실행
 
-프로젝트 루트(`d:\attend`)에서:
+`client` 디렉터리에서:
 
 ```bash
+cd client
 npm run dev:api
 ```
 
@@ -22,8 +23,8 @@ npm run dev:api
 - 연결 확인: `GET http://127.0.0.1:8000/api/db/ping`
 - 문서: `http://127.0.0.1:8000/docs` (Swagger UI)
 
-프론트(Vite)는 `vite.config.ts`에서 `/api` → `8000` 으로 프록시한다.  
-따라서 `npm run dev` 로 UI 띄운 뒤, 같은 터미널이 아닌 **다른 터미널**에서 `npm run dev:api` 를 같이 켜 두면 `fetch('/api/...')` 로 호출 가능하다.
+프론트(Vite)는 `client/vite.config.ts`에서 `/api` → `8000` 으로 프록시한다.  
+따라서 `client`에서 `npm run dev` 로 UI 띄운 뒤, 같은 터미널이 아닌 **다른 터미널**에서 `npm run dev:api` 를 같이 켜 두면 `fetch('/api/...')` 로 호출 가능하다.
 
 ## DB 연결
 

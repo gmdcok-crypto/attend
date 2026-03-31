@@ -41,7 +41,7 @@
 프로젝트 루트에서 `.env` 를 읽고 `sql/001_init.sql` 을 실행합니다.
 
 ```bash
-npm run db:schema
+`cd client` 후 `npm run db:schema`
 ```
 
 또는:

@@ -4,7 +4,7 @@
 
 [build]
 builder = "NIXPACKS"
-# package.json 이 있어도 npm/Vite 는 실행하지 않음
+# 루트에 package.json 없음 — Railpack 이 npm ci 를 돌지 않음 (프론트는 client/)
 buildCommand = "pip install --no-cache-dir -r requirements.txt"
 
 [deploy]

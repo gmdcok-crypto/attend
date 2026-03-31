@@ -10,17 +10,15 @@
 
 레포 루트에 **`railway.toml`** (`builder = NIXPACKS`) + **`nixpacks.toml`** 으로 **Nixpacks만** 쓴다. **Dockerfile·Railpack 자동 Docker 빌드는 사용하지 않는다** (레포에 `Dockerfile` 없음).
 
-빌드 로그에 **`npm ci` / `npm: command not found`** 가 나오면 **Railpack**이 `package.json`을 보고 Node 단계를 도는 경우가 많다. 레포에 **`.node-version`**, **`package.json`의 `engines.node`** 로 Node 20+ 를 힌트할 수 있지만, **근본적으로는 Builder 를 `Nixpacks`로 바꾸고** `pip install …` 만 쓰는 편이 안전하다.
-
-빌드 로그에 **`npm ci` / `npm: command not found`** 가 나오면 **Railpack**이 `package.json`을 보고 Node 단계를 도는 경우가 많다. 레포에 **`.node-version`**, **`package.json`의 `engines.node`** 로 Node 20+ 를 힌트할 수 있지만, **근본적으로는 Builder 를 `Nixpacks`로 바꾸고** `pip install …` 만 쓰는 편이 안전하다.
+빌드 로그에 **`npm ci` / `npm: command not found`** 가 나오면 **Railpack**이 **저장소 루트**의 `package.json`을 보고 Node 단계를 도는 경우가 많다. 이 레포는 **`package.json`을 `client/`로만 두어** Railpack이 루트에서 `npm ci`를 돌지 않게 했다. 그래도 **Builder 를 `Nixpacks`로 맞추고** `pip install …` 만 쓰는 편이 가장 안전하다.
 
 **Railway 대시보드**에서도 한 번 확인한다: 해당 서비스 **Settings → Build → Builder** 가 **Nixpacks** 인지 ( **Dockerfile** / **Railpack** 이 아닌지 ). UI가 Railpack이면 로그에 `COPY . /app`, **`[internal] load .dockerignore`** 같은 Docker/BuildKit 단계가 나올 수 있다. 그 로그는 **“지금 빌드 엔진이 Docker 계열이다”**는 뜻이지, 레포에 반드시 Dockerfile이 있는 건 아니다.
 
 레포에 **`.dockerignore`** 를 두면(무시할 경로만 나열) 위 빌드가 돌 때 컨텍스트만 줄어든다. **Docker를 끄는 설정은 아니고**, Builder를 **Nixpacks**로 맞추는 것이 핵심이다.
 
-**`buildCommand`** 는 `pip install -r requirements.txt` 만 실행해, 루트의 `package.json` 때문에 **`npm run build`(Vite)** 가 기본 실행되지 않게 한다. 시작은 **`uvicorn backend.main:app --host 0.0.0.0 --port $PORT`**. 루트 **`requirements.txt`** 는 `backend/requirements.txt` 와 동일 내용을 유지한다.
+**`buildCommand`** 는 `pip install -r requirements.txt` 만 실행한다. 시작은 **`uvicorn backend.main:app --host 0.0.0.0 --port $PORT`**. 루트 **`requirements.txt`** 는 `backend/requirements.txt` 와 동일 내용을 유지한다.
 
-프론트 정적 빌드(`npm run build`)는 **로컬·CI·별도 Static 서비스**에서 수행한다. Railway API 서비스에서 `npm run build`가 호출되는 예외 상황을 대비해 **`scripts/build.mjs`** 는 Railway 환경 변수가 있으면 **즉시 종료(스킵)** 한다.
+프론트 정적 빌드는 **`client`에서 `npm run build`**. Railway API 서비스에서 빌드 스크립트가 호출되는 예외를 대비해 **`scripts/build.mjs`** 는 Railway 환경 변수가 있으면 **즉시 종료(스킵)** 한다.
 
 ## 서비스 구성(권장) — 프로젝트 `gs_attend`
 
@@ -70,7 +68,7 @@ Railway **MySQL/MariaDB 서비스**에는 보통 `MYSQL_DATABASE`, `MYSQLUSER`, 
 
 ## 빌드·실행 명령 (API 서비스)
 
-- **Install / Start**: `railway.toml` 의 `buildCommand` + `startCommand` (로컬 API는 `npm run dev:api`).
+- **Install / Start**: `railway.toml` 의 `buildCommand` + `startCommand` (로컬 API는 `client`에서 `npm run dev:api`).
 
 `PORT`는 Railway가 주입한다. 로컬은 `npm run dev:api`와 다르게 **0.0.0.0** 바인딩이 필요하다.
 
@@ -86,7 +84,7 @@ Railway **MySQL/MariaDB 서비스**에는 보통 `MYSQL_DATABASE`, `MYSQLUSER`, 
 
 ## 프론트(Vite)
 
-- `npm run build` 결과는 `dist/`. API와 **도메인을 같이 쓰려면** 정적 파일 서빙 또는 별도 Static 호스팅·CDN을 이후 단계에서 결정한다.
+- `client`에서 `npm run build` 결과는 `client/dist/`. API와 **도메인을 같이 쓰려면** 정적 파일 서빙 또는 별도 Static 호스팅·CDN을 이후 단계에서 결정한다.
 - 개발 시에는 Vite가 `/api`를 프록시하므로, 배포 후에는 프론트의 API 베이스 URL을 **Railway API 공개 URL**로 맞춰야 한다 (`vite.config`의 `import.meta.env` 등으로 분리하는 방식이 일반적).
 
 ## 작업 시 체크리스트
