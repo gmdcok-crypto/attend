@@ -9,6 +9,7 @@ const titles: Record<string, string> = {
   raw: '원시자료',
   reports: '보고서관리',
   'work-shift': '근무시간 관리',
+  'admin-settings': '관리자 설정',
 }
 
 const ic = {
@@ -24,6 +25,8 @@ const ic = {
   file: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>',
   clock:
     '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+  settings:
+    '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83l-.12.12a2 2 0 0 1-2.83 0l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.33 1v.2a2 2 0 0 1-2 2h-.34a2 2 0 0 1-2-2V21a1.65 1.65 0 0 0-.33-1 1.65 1.65 0 0 0-1-.6 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0l-.12-.12a2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1-.33H2.8a2 2 0 0 1-2-2v-.34a2 2 0 0 1 2-2H3a1.65 1.65 0 0 0 1-.33 1.65 1.65 0 0 0 .6-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83l.12-.12a2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-.6 1.65 1.65 0 0 0 .33-1V2.8a2 2 0 0 1 2-2h.34a2 2 0 0 1 2 2V3a1.65 1.65 0 0 0 .33 1 1.65 1.65 0 0 0 1 .6 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0l.12.12a2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.08.33.08.67 0 1 .14.38.36.72.66 1 .3.28.66.47 1.05.56.33.08.67.08 1 0"/></svg>',
 }
 
 document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
@@ -64,6 +67,9 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
           </button>
           <button type="button" data-view="work-shift" data-title="근무시간 관리">
             ${ic.clock} 근무시간 관리
+          </button>
+          <button type="button" data-view="admin-settings" data-title="관리자 설정">
+            ${ic.settings} 관리자 설정
           </button>
         </div>
       </nav>
@@ -486,6 +492,42 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
                   <button type="button" class="btn btn-update" id="work-shift-btn-update">수정</button>
                   <button type="button" class="btn btn-danger" id="work-shift-btn-delete">삭제</button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="admin-view" id="view-admin-settings" data-view="admin-settings">
+          <div class="crud-layout">
+            <div class="crud-form-col" style="max-width: 760px">
+              <div class="form-panel panel">
+                <div class="panel-hd">
+                  <h3>관리자 계정 보안</h3>
+                </div>
+                <div class="form-fields">
+                  <div class="form-field">
+                    <label for="admin-login-id">관리자 아이디</label>
+                    <input type="text" id="admin-login-id" autocomplete="username" placeholder="admin" />
+                  </div>
+                  <div class="form-field">
+                    <label for="admin-current-pw">현재 비밀번호</label>
+                    <input type="password" id="admin-current-pw" autocomplete="current-password" />
+                  </div>
+                  <div class="form-field">
+                    <label for="admin-new-pw">새 비밀번호</label>
+                    <input type="password" id="admin-new-pw" autocomplete="new-password" />
+                  </div>
+                  <div class="form-field">
+                    <label for="admin-new-pw2">새 비밀번호 확인</label>
+                    <input type="password" id="admin-new-pw2" autocomplete="new-password" />
+                  </div>
+                </div>
+                <div class="form-actions">
+                  <button type="button" class="btn btn-primary" id="admin-settings-save">저장</button>
+                </div>
+                <p class="dashboard-meta" style="margin-top: 10px">
+                  관리자 인증(JWT) 연동 전 UI 준비 단계입니다.
+                </p>
               </div>
             </div>
           </div>
@@ -1760,6 +1802,21 @@ wireCrudWorkShift()
 wireLeaveEmp()
 initRawToolbarDates()
 startDashboardAutoRefresh()
+bindButtonById('admin-settings-save', '관리자 설정', () => {
+  const id = (document.getElementById('admin-login-id') as HTMLInputElement | null)?.value?.trim() ?? ''
+  const current = (document.getElementById('admin-current-pw') as HTMLInputElement | null)?.value ?? ''
+  const next = (document.getElementById('admin-new-pw') as HTMLInputElement | null)?.value ?? ''
+  const next2 = (document.getElementById('admin-new-pw2') as HTMLInputElement | null)?.value ?? ''
+  if (!id || !current || !next || !next2) {
+    adminAlert('아이디/현재 비밀번호/새 비밀번호를 모두 입력하세요.')
+    return
+  }
+  if (next !== next2) {
+    adminAlert('새 비밀번호와 확인이 일치하지 않습니다.')
+    return
+  }
+  adminAlert('관리자 인증(JWT) 백엔드 연동 전 UI 저장 검증만 완료되었습니다.')
+})
 
 document.addEventListener('visibilitychange', () => {
   const activeView = document.querySelector('.admin-view.is-active')?.getAttribute('data-view')
