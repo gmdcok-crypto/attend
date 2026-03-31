@@ -369,10 +369,11 @@ body {
 }
 
 .scan-digital-clock {
-  margin: -2px 20px 8px;
+  margin: -170px 20px 140px;
   text-align: center;
-  font-size: 1.32rem;
-  font-weight: 800;
+  font-size: 1.9rem;
+  font-weight: 900;
+  line-height: 1.1;
   letter-spacing: 0.05em;
   color: #ffffff;
   font-family: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, monospace;
@@ -384,13 +385,13 @@ body {
 }
 
 .scan-frame {
-  width: 220px;
-  height: 220px;
-  border: 3px solid rgba(255, 255, 255, 0.85);
-  border-radius: 16px;
+  width: 300px;
+  height: 300px;
+  border: 3px solid rgba(56, 189, 248, 0.95);
+  border-radius: 18px;
   box-shadow:
     0 0 0 9999px rgba(0, 0, 0, 0.45),
-    inset 0 0 0 2px rgba(13, 148, 136, 0.6);
+    inset 0 0 0 2px rgba(14, 165, 233, 0.45);
 }
 
 .scan-hint {

@@ -2,7 +2,7 @@ import { Html5Qrcode } from 'html5-qrcode'
 
 let current: Html5Qrcode | null = null
 let stopChain: Promise<void> = Promise.resolve()
-const SCAN_BOX_EDGE = 220
+const SCAN_BOX_EDGE = 300
 
 export async function stopAttendQrScanner(): Promise<void> {
   stopChain = stopChain.then(async () => {
