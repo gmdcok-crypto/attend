@@ -1,0 +1,8 @@
+# Railway가 Railpack/Docker 스타일로 빌드할 때만 사용됨.
+# 권장: 대시보드 Build → Builder = Nixpacks (Dockerfile 미사용)
+.git
+node_modules
+dist
+.venv
+venv
+__pycache__

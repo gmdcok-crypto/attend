@@ -10,7 +10,9 @@
 
 레포 루트에 **`railway.toml`** (`builder = NIXPACKS`) + **`nixpacks.toml`** 으로 **Nixpacks만** 쓴다. **Dockerfile·Railpack 자동 Docker 빌드는 사용하지 않는다** (레포에 `Dockerfile` 없음).
 
-**Railway 대시보드**에서도 한 번 확인한다: 해당 서비스 **Settings → Build → Builder** 가 **Nixpacks** 인지 ( **Dockerfile** / **Railpack** 이 아닌지 ). UI가 Railpack이면 로그에 `COPY . /app` 같은 Docker 단계가 나올 수 있다.
+**Railway 대시보드**에서도 한 번 확인한다: 해당 서비스 **Settings → Build → Builder** 가 **Nixpacks** 인지 ( **Dockerfile** / **Railpack** 이 아닌지 ). UI가 Railpack이면 로그에 `COPY . /app`, **`[internal] load .dockerignore`** 같은 Docker/BuildKit 단계가 나올 수 있다. 그 로그는 **“지금 빌드 엔진이 Docker 계열이다”**는 뜻이지, 레포에 반드시 Dockerfile이 있는 건 아니다.
+
+레포에 **`.dockerignore`** 를 두면(무시할 경로만 나열) 위 빌드가 돌 때 컨텍스트만 줄어든다. **Docker를 끄는 설정은 아니고**, Builder를 **Nixpacks**로 맞추는 것이 핵심이다.
 
 **`buildCommand`** 는 `pip install -r requirements.txt` 만 실행해, 루트의 `package.json` 때문에 **`npm run build`(Vite)** 가 기본 실행되지 않게 한다. 시작은 **`uvicorn backend.main:app --host 0.0.0.0 --port $PORT`**. 루트 **`requirements.txt`** 는 `backend/requirements.txt` 와 동일 내용을 유지한다.
 
