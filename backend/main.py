@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.requests import Request
 
@@ -100,6 +101,13 @@ app.include_router(attendance.router, prefix="/api")
 app.include_router(attendance_clock.router, prefix="/api")
 app.include_router(kiosk.router, prefix="/api")
 app.include_router(work_shifts.router, prefix="/api")
+
+_STATIC_DIST = Path(__file__).resolve().parent.parent / "client" / "dist"
+if _STATIC_DIST.exists():
+    # Serve built frontend pages (/, /admin.html, /attend.html, /tablet.html)
+    app.mount("/", StaticFiles(directory=_STATIC_DIST, html=True), name="frontend")
+else:
+    logger.warning("client/dist 가 없어 정적 프론트를 서빙하지 않습니다.")
 
 
 @app.exception_handler(Exception)

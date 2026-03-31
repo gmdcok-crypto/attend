@@ -4,8 +4,8 @@
 
 [build]
 builder = "NIXPACKS"
-# 루트에 package.json 없음 — Railpack 이 npm ci 를 돌지 않음 (프론트는 client/)
-buildCommand = "pip install --no-cache-dir -r requirements.txt"
+# 프론트(client) 정적 빌드 후 FastAPI 의존성 설치
+buildCommand = "cd client && npm ci && npx tsc && npx vite build && cd .. && pip install --no-cache-dir -r requirements.txt"
 
 [deploy]
 # --log-level warning: 접속/재시작 시 로그 폭주로 Railway 500 logs/s 제한 완화
