@@ -387,30 +387,11 @@ body {
 .scan-frame {
   width: 300px;
   height: 300px;
-  position: relative;
   border: 3px solid rgba(56, 189, 248, 0.95);
   border-radius: 18px;
   box-shadow:
     0 0 0 9999px rgba(0, 0, 0, 0.45),
     inset 0 0 0 2px rgba(14, 165, 233, 0.45);
-}
-
-.scan-frame::before {
-  content: '';
-  position: absolute;
-  inset: 18px;
-  pointer-events: none;
-  border-radius: 12px;
-  background:
-    linear-gradient(#fff, #fff) left top / 38px 6px no-repeat,
-    linear-gradient(#fff, #fff) left top / 6px 38px no-repeat,
-    linear-gradient(#fff, #fff) right top / 38px 6px no-repeat,
-    linear-gradient(#fff, #fff) right top / 6px 38px no-repeat,
-    linear-gradient(#fff, #fff) left bottom / 38px 6px no-repeat,
-    linear-gradient(#fff, #fff) left bottom / 6px 38px no-repeat,
-    linear-gradient(#fff, #fff) right bottom / 38px 6px no-repeat,
-    linear-gradient(#fff, #fff) right bottom / 6px 38px no-repeat;
-  opacity: 0.95;
 }
 
 .scan-hint {
