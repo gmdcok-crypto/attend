@@ -233,6 +233,18 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
                   <input type="date" id="emp-hire" />
                 </div>
                 <div class="form-field form-field--row">
+                  <label for="emp-base-leave">기준연차</label>
+                  <input type="number" id="emp-base-leave" min="0" step="0.5" readonly aria-readonly="true" />
+                </div>
+                <div class="form-field form-field--row">
+                  <label for="emp-remain-leave">잔여연차</label>
+                  <input type="number" id="emp-remain-leave" min="0" step="0.5" value="0" />
+                </div>
+                <div class="form-field form-field--row">
+                  <label for="emp-used-leave">사용연차</label>
+                  <input type="number" id="emp-used-leave" min="0" step="0.5" value="0" />
+                </div>
+                <div class="form-field form-field--row">
                   <label for="emp-status">상태</label>
                   <select id="emp-status">
                     <option value="재직">재직</option>
@@ -820,6 +832,23 @@ function hireInputValue(iso: string): string {
   return iso.length >= 10 ? iso.slice(0, 10) : iso
 }
 
+function calcBaseAnnualLeaveByHireDate(hireDateIso: string): string {
+  if (!hireDateIso) return ''
+  const hire = new Date(hireDateIso)
+  if (Number.isNaN(hire.getTime())) return ''
+  const now = new Date()
+  const years = now.getFullYear() - hire.getFullYear() - (now < new Date(now.getFullYear(), hire.getMonth(), hire.getDate()) ? 1 : 0)
+  if (years < 1) {
+    const months =
+      (now.getFullYear() - hire.getFullYear()) * 12 +
+      (now.getMonth() - hire.getMonth()) -
+      (now.getDate() < hire.getDate() ? 1 : 0)
+    return String(Math.max(0, Math.min(11, months)))
+  }
+  const extra = Math.floor((years - 1) / 2)
+  return String(Math.min(25, 15 + Math.max(0, extra)))
+}
+
 function httpDetail(data: unknown): string {
   if (data == null) return '요청 실패'
   if (typeof data === 'string') return data
@@ -1287,8 +1316,11 @@ function wireCrudEmployees() {
   const nameEl = document.getElementById('emp-name') as HTMLInputElement | null
   const deptEl = document.getElementById('emp-dept') as HTMLSelectElement | null
   const hireEl = document.getElementById('emp-hire') as HTMLInputElement | null
+  const baseLeaveEl = document.getElementById('emp-base-leave') as HTMLInputElement | null
+  const remainLeaveEl = document.getElementById('emp-remain-leave') as HTMLInputElement | null
+  const usedLeaveEl = document.getElementById('emp-used-leave') as HTMLInputElement | null
   const statusEl = document.getElementById('emp-status') as HTMLSelectElement | null
-  if (!tbody || !codeEl || !nameEl || !deptEl || !hireEl || !statusEl) {
+  if (!tbody || !codeEl || !nameEl || !deptEl || !hireEl || !baseLeaveEl || !remainLeaveEl || !usedLeaveEl || !statusEl) {
     console.error('[admin] wireCrudEmployees: DOM 없음')
     return
   }
@@ -1297,7 +1329,15 @@ function wireCrudEmployees() {
   const n = nameEl
   const d = deptEl
   const h = hireEl
+  const bl = baseLeaveEl
+  const rl = remainLeaveEl
+  const ul = usedLeaveEl
   const st = statusEl
+
+  const syncBaseLeave = () => {
+    bl.value = calcBaseAnnualLeaveByHireDate(h.value)
+  }
+  h.addEventListener('change', syncBaseLeave)
 
   let selected: HTMLTableRowElement | null = null
 
@@ -1318,6 +1358,9 @@ function wireCrudEmployees() {
     n.value = tr.dataset.name ?? ''
     d.value = tr.dataset.dept ?? ''
     h.value = tr.dataset.hire ?? ''
+    syncBaseLeave()
+    rl.value = '0'
+    ul.value = '0'
     st.value = tr.dataset.status ?? '재직'
   }
 
@@ -1389,6 +1432,9 @@ function wireCrudEmployees() {
         n.value = ''
         d.value = ''
         h.value = ''
+        bl.value = ''
+        rl.value = '0'
+        ul.value = '0'
         st.value = '재직'
       })
       .catch((err) => adminAlert(String(err)))
@@ -1420,6 +1466,9 @@ function wireCrudEmployees() {
         n.value = ''
         d.value = ''
         h.value = ''
+        bl.value = ''
+        rl.value = '0'
+        ul.value = '0'
         st.value = '재직'
         adminAlert('수정되었습니다.')
       })
@@ -1440,6 +1489,9 @@ function wireCrudEmployees() {
         n.value = ''
         d.value = ''
         h.value = ''
+        bl.value = ''
+        rl.value = '0'
+        ul.value = '0'
         st.value = '재직'
         adminAlert('삭제되었습니다.')
       })

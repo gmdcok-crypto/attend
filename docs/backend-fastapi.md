@@ -45,3 +45,4 @@ Uvicorn으로 `backend.main:app` 을 실행하면 된다. 포트는 플랫폼이
 - 모바일 JWT(access/refresh)는 현재 적용되어 있다.
 - 관리자 JWT는 UI를 먼저 두고 마지막 단계에서 적용한다.
 - 상세 절차는 `docs/admin-jwt-implementation-plan.md` 를 따른다.
+- 연차촉진(모바일 푸시 + 확인/서명) 계획은 `docs/leave-promotion-implementation-plan.md` 를 따른다.
