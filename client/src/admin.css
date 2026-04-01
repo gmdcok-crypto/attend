@@ -615,8 +615,21 @@ body {
 }
 
 .table-wrap--raw-log {
-  max-height: 900px;
+  height: calc(44px + (48px * 10));
+  max-height: calc(44px + (48px * 10));
   overflow-y: auto;
+}
+
+#table-raw-log thead th {
+  height: 44px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+#table-raw-log tbody td {
+  height: 48px;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .raw-edit-panel {
