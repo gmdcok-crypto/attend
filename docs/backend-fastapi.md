@@ -39,3 +39,9 @@ Python에서는 **PyMySQL** (`requirements.txt` 의 `PyMySQL` 패키지)으로 M
 Uvicorn으로 `backend.main:app` 을 실행하면 된다. 포트는 플랫폼이 주는 `PORT` 환경 변수에 맞추면 된다.
 
 **Railway 전체 절차·DB 사설 엔드포인트·환경 변수 표는 `docs/railway-deploy.md` 를 참조한다.**
+
+## 인증 로드맵
+
+- 모바일 JWT(access/refresh)는 현재 적용되어 있다.
+- 관리자 JWT는 UI를 먼저 두고 마지막 단계에서 적용한다.
+- 상세 절차는 `docs/admin-jwt-implementation-plan.md` 를 따른다.

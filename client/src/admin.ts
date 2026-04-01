@@ -407,6 +407,39 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
                   </table>
                 </div>
               </div>
+              <div class="form-panel panel" style="margin-top: 14px; position: static">
+                <div class="panel-hd"><h3>원시자료 편집</h3></div>
+                <div class="form-fields form-fields--inline-rows">
+                  <div class="form-field form-field--row">
+                    <label for="raw-edit-emp-no">사번</label>
+                    <input type="text" id="raw-edit-emp-no" autocomplete="off" />
+                  </div>
+                  <div class="form-field form-field--row">
+                    <label for="raw-edit-emp-name">이름</label>
+                    <input type="text" id="raw-edit-emp-name" autocomplete="off" readonly aria-readonly="true" />
+                  </div>
+                  <div class="form-field form-field--row">
+                    <label for="raw-edit-type">구분</label>
+                    <select id="raw-edit-type">
+                      <option value="IN">출근</option>
+                      <option value="OUT">퇴근</option>
+                    </select>
+                  </div>
+                  <div class="form-field form-field--row">
+                    <label for="raw-edit-date">날짜</label>
+                    <input type="date" id="raw-edit-date" />
+                  </div>
+                  <div class="form-field form-field--row">
+                    <label for="raw-edit-time">시간</label>
+                    <input type="time" id="raw-edit-time" step="1" />
+                  </div>
+                </div>
+                <div class="form-actions">
+                  <button type="button" class="btn btn-primary" id="raw-edit-btn-add">추가</button>
+                  <button type="button" class="btn btn-update" id="raw-edit-btn-update">수정</button>
+                  <button type="button" class="btn btn-danger" id="raw-edit-btn-delete">삭제</button>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -817,6 +850,7 @@ function initRawToolbarDates() {
 let rawPanelWired = false
 let rawStaffCache: EmpRow[] = []
 let selectedRawEmpId: number | null = null
+let selectedRawEventId: number | null = null
 
 function formatOccurredDisplay(iso: string): { day: string; time: string } {
   const d = new Date(iso)
@@ -882,10 +916,23 @@ async function loadRawEvents() {
   }
   const events = await apiJson<AttEvent[]>(`/api/attendance-events?${params.toString()}`)
   tbody.innerHTML = ''
+  const selectedBefore = selectedRawEventId
+  selectedRawEventId = null
   for (const ev of events) {
     const { day, time } = formatOccurredDisplay(ev.occurred_at)
     const tr = document.createElement('tr')
-    tr.innerHTML = `<td>${escapeHtml(day)}</td><td>${escapeHtml(ev.event_type)}</td><td>${escapeHtml(time)}</td>`
+    tr.dataset.id = String(ev.id)
+    tr.dataset.employeeNo = ev.employee_no
+    tr.dataset.employeeName = ev.employee_name
+    tr.dataset.eventType = ev.event_type
+    tr.dataset.eventDate = day
+    tr.dataset.eventTime = time
+    if (selectedBefore === ev.id) {
+      tr.classList.add('is-selected')
+      selectedRawEventId = ev.id
+    }
+    const typeLabel = ev.event_type === 'IN' ? '출근' : ev.event_type === 'OUT' ? '퇴근' : ev.event_type
+    tr.innerHTML = `<td>${escapeHtml(day)}</td><td>${escapeHtml(typeLabel)}</td><td>${escapeHtml(time)}</td>`
     tbody.appendChild(tr)
   }
   if (!events.length) {
@@ -893,6 +940,26 @@ async function loadRawEvents() {
     tr.innerHTML = '<td colspan="3" class="admin-empty-msg">데이터가 없습니다</td>'
     tbody.appendChild(tr)
   }
+}
+
+function fillRawEditFormFromRow(tr: HTMLTableRowElement) {
+  const noEl = document.getElementById('raw-edit-emp-no') as HTMLInputElement | null
+  const nameEl = document.getElementById('raw-edit-emp-name') as HTMLInputElement | null
+  const typeEl = document.getElementById('raw-edit-type') as HTMLSelectElement | null
+  const dateEl = document.getElementById('raw-edit-date') as HTMLInputElement | null
+  const timeEl = document.getElementById('raw-edit-time') as HTMLInputElement | null
+  if (!noEl || !nameEl || !typeEl || !dateEl || !timeEl) return
+  noEl.value = tr.dataset.employeeNo ?? ''
+  nameEl.value = tr.dataset.employeeName ?? ''
+  typeEl.value = tr.dataset.eventType === 'OUT' ? 'OUT' : 'IN'
+  dateEl.value = tr.dataset.eventDate ?? ''
+  const rawTime = tr.dataset.eventTime ?? ''
+  timeEl.value = rawTime.length >= 8 ? rawTime.slice(0, 8) : rawTime
+}
+
+function clearRawEditSelection() {
+  selectedRawEventId = null
+  document.querySelectorAll('#tbody-raw-log tr').forEach((r) => r.classList.remove('is-selected'))
 }
 
 function wireRawPanelOnce() {
@@ -933,6 +1000,92 @@ function wireRawPanelOnce() {
     }
     renderRawStaffTable()
     loadRawEvents().catch((err) => adminAlert(String(err)))
+  })
+
+  document.getElementById('tbody-raw-log')?.addEventListener('click', (e) => {
+    const el = clickTargetElement(e)
+    const tr = el?.closest('tr')
+    const tbody = document.getElementById('tbody-raw-log')
+    if (!tr || !tbody || tr.parentElement !== tbody || !tr.dataset.id) return
+    clearRawEditSelection()
+    tr.classList.add('is-selected')
+    selectedRawEventId = parseInt(tr.dataset.id, 10)
+    fillRawEditFormFromRow(tr as HTMLTableRowElement)
+  })
+
+  const resolveNameByNo = () => {
+    const noEl = document.getElementById('raw-edit-emp-no') as HTMLInputElement | null
+    const nameEl = document.getElementById('raw-edit-emp-name') as HTMLInputElement | null
+    if (!noEl || !nameEl) return
+    const no = noEl.value.trim()
+    if (!no) {
+      nameEl.value = ''
+      return
+    }
+    apiJson<{ name: string }>(`/api/employees/by-number/${encodeURIComponent(no)}`)
+      .then((r) => {
+        nameEl.value = r.name
+      })
+      .catch(() => {
+        nameEl.value = ''
+      })
+  }
+  document.getElementById('raw-edit-emp-no')?.addEventListener('blur', resolveNameByNo)
+
+  bindButtonById('raw-edit-btn-add', '원시자료', () => {
+    const no = (document.getElementById('raw-edit-emp-no') as HTMLInputElement | null)?.value?.trim() ?? ''
+    const typ = (document.getElementById('raw-edit-type') as HTMLSelectElement | null)?.value ?? 'IN'
+    const dt = (document.getElementById('raw-edit-date') as HTMLInputElement | null)?.value ?? ''
+    const tm = (document.getElementById('raw-edit-time') as HTMLInputElement | null)?.value ?? ''
+    if (!no || !dt || !tm) {
+      adminAlert('사번·날짜·시간을 입력하세요.')
+      return
+    }
+    apiJson<{ id: number }>('/api/attendance-events', {
+      method: 'POST',
+      body: JSON.stringify({ employee_no: no, event_type: typ, event_date: dt, event_time: tm }),
+    })
+      .then(() => loadRawEvents())
+      .then(() => adminAlert('추가되었습니다.'))
+      .catch((err) => adminAlert(String(err)))
+  })
+
+  bindButtonById('raw-edit-btn-update', '원시자료', () => {
+    if (!selectedRawEventId) {
+      adminAlert('수정할 원시자료 행을 먼저 선택하세요.')
+      return
+    }
+    const no = (document.getElementById('raw-edit-emp-no') as HTMLInputElement | null)?.value?.trim() ?? ''
+    const typ = (document.getElementById('raw-edit-type') as HTMLSelectElement | null)?.value ?? 'IN'
+    const dt = (document.getElementById('raw-edit-date') as HTMLInputElement | null)?.value ?? ''
+    const tm = (document.getElementById('raw-edit-time') as HTMLInputElement | null)?.value ?? ''
+    if (!no || !dt || !tm) {
+      adminAlert('사번·날짜·시간을 입력하세요.')
+      return
+    }
+    const id = selectedRawEventId
+    apiJson(`/api/attendance-events/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ employee_no: no, event_type: typ, event_date: dt, event_time: tm }),
+    })
+      .then(() => loadRawEvents())
+      .then(() => adminAlert('수정되었습니다.'))
+      .catch((err) => adminAlert(String(err)))
+  })
+
+  bindButtonById('raw-edit-btn-delete', '원시자료', () => {
+    if (!selectedRawEventId) {
+      adminAlert('삭제할 원시자료 행을 먼저 선택하세요.')
+      return
+    }
+    const id = selectedRawEventId
+    apiJson(`/api/attendance-events/${id}`, { method: 'DELETE' })
+      .then(() => {
+        clearRawEditSelection()
+        return loadRawEvents()
+      })
+      .then(() => adminAlert('삭제되었습니다.'))
+      .catch((err) => adminAlert(String(err)))
   })
 }
 
