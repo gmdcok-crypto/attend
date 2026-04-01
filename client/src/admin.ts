@@ -237,12 +237,12 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
                   <input type="number" id="emp-base-leave" min="0" step="0.5" readonly aria-readonly="true" />
                 </div>
                 <div class="form-field form-field--row">
-                  <label for="emp-remain-leave">잔여연차</label>
-                  <input type="number" id="emp-remain-leave" min="0" step="0.5" value="0" />
-                </div>
-                <div class="form-field form-field--row">
                   <label for="emp-used-leave">사용연차</label>
                   <input type="number" id="emp-used-leave" min="0" step="0.5" value="0" />
+                </div>
+                <div class="form-field form-field--row">
+                  <label for="emp-remain-leave">잔여연차</label>
+                  <input type="number" id="emp-remain-leave" min="0" step="0.5" value="0" />
                 </div>
                 <div class="form-field form-field--row">
                   <label for="emp-status">상태</label>
