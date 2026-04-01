@@ -9,6 +9,7 @@ const titles: Record<string, string> = {
   raw: '원시자료',
   reports: '보고서관리',
   'work-shift': '근무시간 관리',
+  'leave-promotion': '연차촉진',
   'admin-settings': '관리자 설정',
 }
 
@@ -67,6 +68,9 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
           </button>
           <button type="button" data-view="work-shift" data-title="근무시간 관리">
             ${ic.clock} 근무시간 관리
+          </button>
+          <button type="button" data-view="leave-promotion" data-title="연차촉진">
+            ${ic.calendar} 연차촉진
           </button>
           <button type="button" data-view="admin-settings" data-title="관리자 설정">
             ${ic.settings} 관리자 설정
@@ -518,6 +522,16 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section class="admin-view" id="view-leave-promotion" data-view="leave-promotion">
+          <div class="page-toolbar">
+            <p class="desc">연차 촉진 대상 조회, 안내 발송, 이력 관리를 준비하는 메뉴입니다.</p>
+          </div>
+          <div class="panel">
+            <div class="panel-hd"><h3>연차촉진</h3></div>
+            <p class="empty-hint">연차촉진 기능 화면은 다음 단계에서 구현됩니다.</p>
           </div>
         </section>
 
