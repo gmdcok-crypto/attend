@@ -600,7 +600,7 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
             <div class="crud-table-col">
               <div class="panel">
                 <div class="panel-hd"><h3>연차촉진 대상자</h3></div>
-                <div class="panel-bd table-wrap">
+                <div class="panel-bd table-wrap table-wrap--leave-promo-targets">
                   <table class="data-table" id="table-leave-promotion-targets">
                     <thead>
                       <tr><th>사번</th><th>성명</th><th>부서</th><th>잔여</th><th>1차</th><th>2차</th><th>서명</th></tr>

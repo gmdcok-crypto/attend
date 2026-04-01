@@ -619,6 +619,12 @@ body {
   white-space: nowrap;
 }
 
+.table-wrap--leave-promo-targets {
+  height: 640px;
+  max-height: 640px;
+  overflow-y: auto;
+}
+
 .page-toolbar--leave-emp {
   margin-bottom: 16px;
 }
