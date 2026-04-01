@@ -407,8 +407,7 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
                   </table>
                 </div>
               </div>
-              <div class="form-panel panel" style="margin-top: 14px; position: static">
-                <div class="panel-hd"><h3>원시자료 편집</h3></div>
+              <div class="form-panel panel raw-edit-panel">
                 <div class="form-fields form-fields--inline-rows raw-edit-fields">
                   <div class="raw-edit-row">
                     <div class="form-field form-field--row">

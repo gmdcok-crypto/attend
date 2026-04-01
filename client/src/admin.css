@@ -614,8 +614,13 @@ body {
 }
 
 .table-wrap--raw-log {
-  max-height: 560px;
+  max-height: 620px;
   overflow-y: auto;
+}
+
+.raw-edit-panel {
+  margin-top: 56px;
+  position: static;
 }
 
 .raw-edit-fields {
