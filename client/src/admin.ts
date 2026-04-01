@@ -601,9 +601,9 @@ type DashboardSummary = {
 
 const DASHBOARD_REFRESH_MS = 5000
 let dashboardRefreshTimer: number | null = null
-const EMPLOYEE_REFRESH_MS = 3000
-let employeeRefreshTimer: number | null = null
 let employeeRealtimeLoad: (() => Promise<void>) | null = null
+let employeeEventSource: EventSource | null = null
+let employeeRefreshInFlight = false
 
 async function loadDashboard() {
   const s = await apiJson<DashboardSummary>('/api/dashboard/summary')
@@ -654,20 +654,32 @@ function startDashboardAutoRefresh() {
 }
 
 function stopEmployeeAutoRefresh() {
-  if (employeeRefreshTimer != null) {
-    window.clearInterval(employeeRefreshTimer)
-    employeeRefreshTimer = null
+  if (employeeEventSource) {
+    employeeEventSource.close()
+    employeeEventSource = null
   }
 }
 
 function startEmployeeAutoRefresh() {
-  stopEmployeeAutoRefresh()
   if (!employeeRealtimeLoad) return
   void employeeRealtimeLoad().catch((e) => console.warn('[admin] employee refresh', e))
-  employeeRefreshTimer = window.setInterval(() => {
-    if (!employeeRealtimeLoad) return
-    void employeeRealtimeLoad().catch((e) => console.warn('[admin] employee refresh', e))
-  }, EMPLOYEE_REFRESH_MS)
+  if (employeeEventSource) return
+
+  const es = new EventSource('/api/admin/events')
+  employeeEventSource = es
+  const triggerLoad = () => {
+    if (!employeeRealtimeLoad || employeeRefreshInFlight) return
+    employeeRefreshInFlight = true
+    void employeeRealtimeLoad()
+      .catch((e) => console.warn('[admin] employee refresh', e))
+      .finally(() => {
+        employeeRefreshInFlight = false
+      })
+  }
+  es.addEventListener('employee_auth', triggerLoad)
+  es.onerror = () => {
+    // keep the current connection logic simple; browser auto-reconnects EventSource.
+  }
 }
 
 function showView(id: string) {

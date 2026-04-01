@@ -14,6 +14,7 @@ from fastapi.security import HTTPBearer
 from pydantic import BaseModel, Field
 
 from backend.database import Connection, DictCursor, get_db
+from backend.admin_events_bus import publish_employee_auth_changed
 from backend.mobile_jwt import (
     create_mobile_access_token,
     create_mobile_refresh_token,
@@ -139,6 +140,7 @@ def set_first_password(body: FirstPasswordBody, conn: Connection = Depends(get_d
     conn.commit()
     if cur.rowcount == 0:
         raise HTTPException(status_code=500, detail="저장에 실패했습니다.")
+    publish_employee_auth_changed(emp_id)
 
     tokens = _issue_tokens(conn, emp_id, row["employee_no"])
     return {
@@ -205,6 +207,7 @@ def mobile_login(body: LoginBody, conn: Connection = Depends(get_db)) -> dict:
                 status_code=409,
                 detail="비밀번호가 이미 설정되었습니다. 이름 입력 없이 비밀번호만으로 다시 로그인하세요.",
             )
+        publish_employee_auth_changed(emp_id)
         return _login_response(conn, emp_id, row["employee_no"], display_name, "O")
 
     if not verify_password(body.password, ph):

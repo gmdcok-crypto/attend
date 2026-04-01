@@ -20,6 +20,7 @@ from starlette.requests import Request
 
 from backend.database import DictCursor, get_connection
 from backend.routes import (
+    admin_events,
     attendance,
     attendance_clock,
     auth_mobile,
@@ -111,6 +112,7 @@ async def static_cache_control(request: Request, call_next):
     return response
 
 app.include_router(auth_mobile.router, prefix="/api")
+app.include_router(admin_events.router, prefix="/api")
 app.include_router(dashboard.router, prefix="/api")
 app.include_router(departments.router, prefix="/api")
 app.include_router(leave_codes.router, prefix="/api")

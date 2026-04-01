@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from backend.database import Connection, DictCursor, IntegrityError, get_db
+from backend.admin_events_bus import publish_employee_auth_changed
 from backend.passwords import hash_password
 
 router = APIRouter(prefix="/employees", tags=["employees"])
@@ -164,6 +165,7 @@ def update_employee(
     conn.commit()
     if cur.rowcount == 0:
         raise HTTPException(status_code=404, detail="not found")
+    publish_employee_auth_changed(emp_id)
     return {"ok": True}
 
 
@@ -190,6 +192,7 @@ def revoke_employee_auth(emp_id: int, conn: Connection = Depends(get_db)) -> dic
     conn.commit()
     if cur.rowcount == 0:
         raise HTTPException(status_code=404, detail="not found")
+    publish_employee_auth_changed(emp_id)
     return {"ok": True}
 
 
