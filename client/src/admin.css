@@ -588,20 +588,22 @@ body {
   margin-bottom: 18px;
 }
 
-.leave-promo-filter-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px 18px;
+.leave-promo-filter-panel .empty-hint {
+  padding: 30px 22px;
+  text-align: left;
 }
 
-.leave-promo-filter-row .form-field--row label {
-  min-width: 4.5em;
+.leave-promo-query-layout {
+  grid-template-columns: minmax(0, 68%) minmax(300px, 1fr);
+  margin-bottom: 18px;
 }
 
-.leave-promo-filter-row .btn {
-  align-self: center;
-  margin-left: 4px;
+.leave-promo-query-form {
+  position: static;
+}
+
+.leave-promo-query-form .form-field--row label {
+  min-width: 4.8em;
 }
 
 .leave-promo-layout {
@@ -718,6 +720,10 @@ body {
   }
 
   .leave-promo-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .leave-promo-query-layout {
     grid-template-columns: 1fr;
   }
 

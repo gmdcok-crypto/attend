@@ -563,28 +563,40 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
               <div class="stat-foot">2차 안내 발송 완료 인원</div>
             </div>
           </div>
-          <div class="panel leave-promo-filter-panel">
-            <div class="panel-hd"><h3>대상 조회</h3></div>
-            <div class="form-fields form-fields--inline-rows leave-promo-filter-row">
-              <div class="form-field form-field--row">
-                <label for="lp-year">기준연도</label>
-                <input type="number" id="lp-year" min="2000" max="2100" value="2026" />
+          <div class="crud-layout leave-promo-query-layout">
+            <div class="crud-table-col">
+              <div class="panel leave-promo-filter-panel">
+                <div class="panel-hd"><h3>대상 조회</h3></div>
+                <p class="empty-hint">조건을 설정한 뒤 조회 버튼을 눌러 연차촉진 대상자를 확인하세요.</p>
               </div>
-              <div class="form-field form-field--row">
-                <label for="lp-dept">부서</label>
-                <select id="lp-dept">
-                  <option value="">전체</option>
-                </select>
+            </div>
+            <div class="crud-form-col crud-form-col--inline">
+              <div class="form-panel panel form-panel--inline leave-promo-query-form">
+                <div class="panel-hd"><h3>조회 조건</h3></div>
+                <div class="form-fields form-fields--inline-rows">
+                  <div class="form-field form-field--row">
+                    <label for="lp-year">기준연도</label>
+                    <input type="number" id="lp-year" min="2000" max="2100" value="2026" />
+                  </div>
+                  <div class="form-field form-field--row">
+                    <label for="lp-dept">부서</label>
+                    <select id="lp-dept">
+                      <option value="">전체</option>
+                    </select>
+                  </div>
+                  <div class="form-field form-field--row">
+                    <label for="lp-status">서명상태</label>
+                    <select id="lp-status">
+                      <option value="">전체</option>
+                      <option value="pending">미서명</option>
+                      <option value="signed">서명완료</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-actions">
+                  <button type="button" class="btn btn-primary" id="lp-btn-search">조회</button>
+                </div>
               </div>
-              <div class="form-field form-field--row">
-                <label for="lp-status">서명상태</label>
-                <select id="lp-status">
-                  <option value="">전체</option>
-                  <option value="pending">미서명</option>
-                  <option value="signed">서명완료</option>
-                </select>
-              </div>
-              <button type="button" class="btn btn-primary" id="lp-btn-search">조회</button>
             </div>
           </div>
           <div class="crud-layout leave-promo-layout">
