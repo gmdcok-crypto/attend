@@ -211,11 +211,11 @@ body {
   gap: 12px;
 }
 
-.admin-topbar-revoke {
+.admin-topbar .admin-topbar-revoke {
   display: none;
 }
 
-.admin-topbar--employees .admin-topbar-revoke {
+.admin-topbar.admin-topbar--employees .admin-topbar-revoke {
   display: inline-flex;
   margin-right: 190px;
 }
@@ -615,12 +615,12 @@ body {
 }
 
 .table-wrap--raw-log {
-  max-height: 752px;
+  max-height: 900px;
   overflow-y: auto;
 }
 
 .raw-edit-panel {
-  margin-top: 170px;
+  margin-top: 300px;
   position: static;
 }
 
