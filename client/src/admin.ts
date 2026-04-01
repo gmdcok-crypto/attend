@@ -539,11 +539,102 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
 
         <section class="admin-view" id="view-leave-promotion" data-view="leave-promotion">
           <div class="page-toolbar">
-            <p class="desc">연차 촉진 대상 조회, 안내 발송, 이력 관리를 준비하는 메뉴입니다.</p>
+            <p class="desc">연차촉진 대상자를 조회하고 1차/2차 촉진 발송 및 서명 현황을 관리합니다.</p>
           </div>
-          <div class="panel">
-            <div class="panel-hd"><h3>연차촉진</h3></div>
-            <p class="empty-hint">연차촉진 기능 화면은 다음 단계에서 구현됩니다.</p>
+          <div class="stat-grid leave-promo-stat-grid">
+            <div class="stat-card">
+              <div class="stat-label">대상자</div>
+              <div class="stat-value" id="lp-stat-target">0</div>
+              <div class="stat-foot">검색 조건 기준 촉진 대상 인원</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">미서명</div>
+              <div class="stat-value" id="lp-stat-pending">0</div>
+              <div class="stat-foot">안내 발송 후 서명 대기 인원</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">1차 발송</div>
+              <div class="stat-value" id="lp-stat-first">0</div>
+              <div class="stat-foot">1차 안내 발송 완료 인원</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">2차 발송</div>
+              <div class="stat-value" id="lp-stat-second">0</div>
+              <div class="stat-foot">2차 안내 발송 완료 인원</div>
+            </div>
+          </div>
+          <div class="panel leave-promo-filter-panel">
+            <div class="panel-hd"><h3>대상 조회</h3></div>
+            <div class="form-fields form-fields--inline-rows leave-promo-filter-row">
+              <div class="form-field form-field--row">
+                <label for="lp-year">기준연도</label>
+                <input type="number" id="lp-year" min="2000" max="2100" value="2026" />
+              </div>
+              <div class="form-field form-field--row">
+                <label for="lp-dept">부서</label>
+                <select id="lp-dept">
+                  <option value="">전체</option>
+                </select>
+              </div>
+              <div class="form-field form-field--row">
+                <label for="lp-status">서명상태</label>
+                <select id="lp-status">
+                  <option value="">전체</option>
+                  <option value="pending">미서명</option>
+                  <option value="signed">서명완료</option>
+                </select>
+              </div>
+              <button type="button" class="btn btn-primary" id="lp-btn-search">조회</button>
+            </div>
+          </div>
+          <div class="crud-layout leave-promo-layout">
+            <div class="crud-table-col">
+              <div class="panel">
+                <div class="panel-hd"><h3>연차촉진 대상자</h3></div>
+                <div class="panel-bd table-wrap">
+                  <table class="data-table" id="table-leave-promotion-targets">
+                    <thead>
+                      <tr><th>사번</th><th>성명</th><th>부서</th><th>잔여</th><th>1차</th><th>2차</th><th>서명</th></tr>
+                    </thead>
+                    <tbody id="tbody-leave-promotion-targets">
+                      <tr><td colspan="7" class="admin-empty-msg">조회 버튼을 눌러 대상자를 불러오세요.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div class="crud-form-col">
+              <div class="form-panel panel">
+                <div class="panel-hd"><h3>촉진 안내 설정</h3></div>
+                <div class="form-fields">
+                  <div class="form-field">
+                    <label for="lp-campaign-title">안내 제목</label>
+                    <input type="text" id="lp-campaign-title" value="[연차촉진] 연차 사용 촉진 안내" />
+                  </div>
+                  <div class="form-field form-field--row">
+                    <label for="lp-doc-version">문서버전</label>
+                    <input type="text" id="lp-doc-version" value="v1.0" />
+                  </div>
+                  <div class="form-field form-field--row">
+                    <label for="lp-send-date-1">1차 발송일</label>
+                    <input type="date" id="lp-send-date-1" />
+                  </div>
+                  <div class="form-field form-field--row">
+                    <label for="lp-send-date-2">2차 발송일</label>
+                    <input type="date" id="lp-send-date-2" />
+                  </div>
+                  <div class="form-field">
+                    <label for="lp-message">안내 문구</label>
+                    <textarea id="lp-message" rows="5">연차 사용 촉진 안내문을 확인하시고 서명해 주세요.</textarea>
+                  </div>
+                </div>
+                <div class="form-actions">
+                  <button type="button" class="btn btn-ghost" id="lp-btn-preview">미리보기</button>
+                  <button type="button" class="btn btn-primary" id="lp-btn-send-first">1차 발송</button>
+                  <button type="button" class="btn btn-update" id="lp-btn-send-second">2차 발송</button>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 

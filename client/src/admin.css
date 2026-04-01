@@ -580,6 +580,39 @@ body {
   grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
 }
 
+.leave-promo-stat-grid {
+  margin-bottom: 18px;
+}
+
+.leave-promo-filter-panel {
+  margin-bottom: 18px;
+}
+
+.leave-promo-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 18px;
+}
+
+.leave-promo-filter-row .form-field--row label {
+  min-width: 4.5em;
+}
+
+.leave-promo-filter-row .btn {
+  align-self: center;
+  margin-left: 4px;
+}
+
+.leave-promo-layout {
+  grid-template-columns: minmax(0, 68%) minmax(300px, 1fr);
+}
+
+#table-leave-promotion-targets th,
+#table-leave-promotion-targets td {
+  white-space: nowrap;
+}
+
 .page-toolbar--leave-emp {
   margin-bottom: 16px;
 }
@@ -681,6 +714,10 @@ body {
   }
 
   .crud-layout--leave-emp {
+    grid-template-columns: 1fr;
+  }
+
+  .leave-promo-layout {
     grid-template-columns: 1fr;
   }
 
