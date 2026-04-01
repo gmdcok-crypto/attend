@@ -398,7 +398,7 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
             <div class="crud-table-col">
               <div class="panel">
                 <div class="panel-hd"><h3>원시자료</h3></div>
-                <div class="panel-bd table-wrap">
+                <div class="panel-bd table-wrap table-wrap--raw-log">
                   <table class="data-table" id="table-raw-log">
                     <thead>
                       <tr><th>일자</th><th>구분</th><th>시간</th></tr>
@@ -409,29 +409,33 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
               </div>
               <div class="form-panel panel" style="margin-top: 14px; position: static">
                 <div class="panel-hd"><h3>원시자료 편집</h3></div>
-                <div class="form-fields form-fields--inline-rows">
-                  <div class="form-field form-field--row">
-                    <label for="raw-edit-emp-no">사번</label>
-                    <input type="text" id="raw-edit-emp-no" autocomplete="off" />
+                <div class="form-fields form-fields--inline-rows raw-edit-fields">
+                  <div class="raw-edit-row">
+                    <div class="form-field form-field--row">
+                      <label for="raw-edit-emp-no">사번</label>
+                      <input type="text" id="raw-edit-emp-no" autocomplete="off" />
+                    </div>
+                    <div class="form-field form-field--row">
+                      <label for="raw-edit-emp-name">이름</label>
+                      <input type="text" id="raw-edit-emp-name" autocomplete="off" readonly aria-readonly="true" />
+                    </div>
+                    <div class="form-field form-field--row">
+                      <label for="raw-edit-type">구분</label>
+                      <select id="raw-edit-type">
+                        <option value="IN">출근</option>
+                        <option value="OUT">퇴근</option>
+                      </select>
+                    </div>
                   </div>
-                  <div class="form-field form-field--row">
-                    <label for="raw-edit-emp-name">이름</label>
-                    <input type="text" id="raw-edit-emp-name" autocomplete="off" readonly aria-readonly="true" />
-                  </div>
-                  <div class="form-field form-field--row">
-                    <label for="raw-edit-type">구분</label>
-                    <select id="raw-edit-type">
-                      <option value="IN">출근</option>
-                      <option value="OUT">퇴근</option>
-                    </select>
-                  </div>
-                  <div class="form-field form-field--row">
-                    <label for="raw-edit-date">날짜</label>
-                    <input type="date" id="raw-edit-date" />
-                  </div>
-                  <div class="form-field form-field--row">
-                    <label for="raw-edit-time">시간</label>
-                    <input type="time" id="raw-edit-time" step="1" />
+                  <div class="raw-edit-row raw-edit-row--compact">
+                    <div class="form-field form-field--row">
+                      <label for="raw-edit-date">날짜</label>
+                      <input type="date" id="raw-edit-date" />
+                    </div>
+                    <div class="form-field form-field--row">
+                      <label for="raw-edit-time">시간</label>
+                      <input type="time" id="raw-edit-time" step="1" />
+                    </div>
                   </div>
                 </div>
                 <div class="form-actions">

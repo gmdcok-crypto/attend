@@ -56,6 +56,28 @@ def _parse_occurred_at(event_date: str, event_time: str) -> datetime:
     raise HTTPException(status_code=400, detail="시간 형식이 올바르지 않습니다.")
 
 
+def _enforce_daily_single_event(
+    conn: Connection, employee_id: int, event_type: str, occurred_at: datetime, exclude_id: int | None = None
+) -> None:
+    cur = conn.cursor(DictCursor)
+    q = """
+        SELECT id
+        FROM attendance_events
+        WHERE employee_id = %s
+          AND event_type = %s
+          AND DATE(occurred_at) = DATE(%s)
+    """
+    params: list[object] = [employee_id, event_type, occurred_at]
+    if exclude_id is not None:
+        q += " AND id <> %s"
+        params.append(exclude_id)
+    q += " LIMIT 1"
+    cur.execute(q, tuple(params))
+    if cur.fetchone():
+        label = "출근" if event_type == "IN" else "퇴근"
+        raise HTTPException(status_code=409, detail=f"해당 날짜의 {label} 기록은 1회만 가능합니다.")
+
+
 @router.get("")
 def list_attendance_events(
     conn: Connection = Depends(get_db),
@@ -129,6 +151,7 @@ def create_attendance_event(body: AttendanceEventWrite, conn: Connection = Depen
     employee_id = _resolve_employee_id(conn, body.employee_no)
     event_type = _normalize_event_type(body.event_type)
     occurred_at = _parse_occurred_at(body.event_date, body.event_time)
+    _enforce_daily_single_event(conn, employee_id, event_type, occurred_at)
 
     cur = conn.cursor()
     cur.execute("SET time_zone = '+09:00'")
@@ -150,6 +173,7 @@ def update_attendance_event(
     employee_id = _resolve_employee_id(conn, body.employee_no)
     event_type = _normalize_event_type(body.event_type)
     occurred_at = _parse_occurred_at(body.event_date, body.event_time)
+    _enforce_daily_single_event(conn, employee_id, event_type, occurred_at, exclude_id=event_id)
 
     cur = conn.cursor()
     cur.execute("SET time_zone = '+09:00'")

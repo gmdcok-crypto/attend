@@ -613,6 +613,25 @@ body {
   font-weight: 600;
 }
 
+.table-wrap--raw-log {
+  max-height: 560px;
+  overflow-y: auto;
+}
+
+.raw-edit-fields {
+  gap: 10px;
+}
+
+.raw-edit-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+
+.raw-edit-row--compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 /* 원시자료 · 구분·시간: 출근 = 사이드 선택 글자색, 퇴근 = 본문 기본색 */
 #view-raw .raw-type--in,
 #view-raw .raw-time--in {
@@ -643,6 +662,11 @@ body {
   }
 
   .crud-layout--leave-emp {
+    grid-template-columns: 1fr;
+  }
+
+  .raw-edit-row,
+  .raw-edit-row--compact {
     grid-template-columns: 1fr;
   }
 }

@@ -27,6 +27,23 @@ def _dt_iso(v: Any) -> str:
     return str(v)
 
 
+def _today_type_count(conn: Connection, employee_id: int, event_type: str) -> int:
+    cur = conn.cursor(DictCursor)
+    cur.execute("SET time_zone = '+09:00'")
+    cur.execute(
+        """
+        SELECT COUNT(*) AS cnt
+        FROM attendance_events
+        WHERE employee_id = %s
+          AND event_type = %s
+          AND DATE(occurred_at) = CURDATE()
+        """,
+        (employee_id, event_type),
+    )
+    row = cur.fetchone() or {}
+    return int(row.get("cnt") or 0)
+
+
 @router.get("/today")
 def attendance_today(
     employee_id: int = Depends(get_mobile_employee_id),
@@ -102,12 +119,16 @@ def clock_with_qr(
     last_type = last["event_type"] if last else None
 
     if intent == "in":
+        if _today_type_count(conn, employee_id, "IN") >= 1:
+            raise HTTPException(status_code=409, detail="오늘 출근은 1회만 가능합니다.")
         if last_type == "IN":
             raise HTTPException(
                 status_code=409,
                 detail="오늘 이미 출근 처리되었습니다. 퇴근 후 다시 시도하세요.",
             )
     else:
+        if _today_type_count(conn, employee_id, "OUT") >= 1:
+            raise HTTPException(status_code=409, detail="오늘 퇴근은 1회만 가능합니다.")
         if last_type != "IN":
             raise HTTPException(
                 status_code=409,
