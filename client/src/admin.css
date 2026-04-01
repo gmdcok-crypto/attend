@@ -217,6 +217,7 @@ body {
 
 .admin-topbar--employees .admin-topbar-revoke {
   display: inline-flex;
+  margin-right: 190px;
 }
 
 .admin-user {
@@ -904,6 +905,10 @@ body {
 
   .admin-sidebar-foot {
     display: none;
+  }
+
+  .admin-topbar--employees .admin-topbar-revoke {
+    margin-right: 0;
   }
 
   .admin-topbar {
