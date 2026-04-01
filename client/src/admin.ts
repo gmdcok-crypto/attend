@@ -601,6 +601,9 @@ type DashboardSummary = {
 
 const DASHBOARD_REFRESH_MS = 5000
 let dashboardRefreshTimer: number | null = null
+const EMPLOYEE_REFRESH_MS = 3000
+let employeeRefreshTimer: number | null = null
+let employeeRealtimeLoad: (() => Promise<void>) | null = null
 
 async function loadDashboard() {
   const s = await apiJson<DashboardSummary>('/api/dashboard/summary')
@@ -650,6 +653,23 @@ function startDashboardAutoRefresh() {
   }, DASHBOARD_REFRESH_MS)
 }
 
+function stopEmployeeAutoRefresh() {
+  if (employeeRefreshTimer != null) {
+    window.clearInterval(employeeRefreshTimer)
+    employeeRefreshTimer = null
+  }
+}
+
+function startEmployeeAutoRefresh() {
+  stopEmployeeAutoRefresh()
+  if (!employeeRealtimeLoad) return
+  void employeeRealtimeLoad().catch((e) => console.warn('[admin] employee refresh', e))
+  employeeRefreshTimer = window.setInterval(() => {
+    if (!employeeRealtimeLoad) return
+    void employeeRealtimeLoad().catch((e) => console.warn('[admin] employee refresh', e))
+  }, EMPLOYEE_REFRESH_MS)
+}
+
 function showView(id: string) {
   document.querySelectorAll('.admin-view').forEach((el) => {
     el.classList.toggle('is-active', el.getAttribute('data-view') === id)
@@ -664,6 +684,8 @@ function showView(id: string) {
   document.getElementById('admin-topbar')?.classList.toggle('admin-topbar--employees', id === 'employees')
   if (id === 'dashboard') startDashboardAutoRefresh()
   else stopDashboardAutoRefresh()
+  if (id === 'employees') startEmployeeAutoRefresh()
+  else stopEmployeeAutoRefresh()
   if (id === 'raw') loadRawPanel().catch((e) => adminAlert(String(e)))
   if (id === 'leave-emp') refreshLeaveEmpView().catch((e) => adminAlert(String(e)))
 }
@@ -1125,6 +1147,7 @@ function wireCrudEmployees() {
   }
 
   async function loadEmployees() {
+    const selectedId = selected?.dataset.id ?? null
     const rows = await apiJson<EmpRow[]>('/api/employees')
     tb.innerHTML = ''
     for (const row of rows) {
@@ -1149,6 +1172,10 @@ function wireCrudEmployees() {
       const tr = document.createElement('tr')
       tr.innerHTML = '<td colspan="6" class="admin-empty-msg">데이터가 없습니다</td>'
       tb.appendChild(tr)
+    }
+    if (selectedId) {
+      const tr = tb.querySelector<HTMLTableRowElement>(`tr[data-id="${selectedId}"]`)
+      if (tr) selectRow(tr)
     }
   }
 
@@ -1256,6 +1283,8 @@ function wireCrudEmployees() {
   fillEmployeeDepartmentSelect(d)
     .then(() => loadEmployees())
     .catch((e) => adminAlert(String(e)))
+
+  employeeRealtimeLoad = loadEmployees
 }
 
 function wireCrudLeave() {
@@ -1787,9 +1816,13 @@ document.addEventListener('visibilitychange', () => {
   const activeView = document.querySelector('.admin-view.is-active')?.getAttribute('data-view')
   if (document.hidden) {
     stopDashboardAutoRefresh()
+    stopEmployeeAutoRefresh()
     return
   }
   if (activeView === 'dashboard') {
     startDashboardAutoRefresh()
+  }
+  if (activeView === 'employees') {
+    startEmployeeAutoRefresh()
   }
 })
