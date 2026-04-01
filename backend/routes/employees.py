@@ -179,6 +179,14 @@ def revoke_employee_auth(emp_id: int, conn: Connection = Depends(get_db)) -> dic
         """,
         (emp_id,),
     )
+    cur.execute(
+        """
+        UPDATE mobile_refresh_tokens
+        SET revoked_at = NOW(3)
+        WHERE employee_id=%s AND revoked_at IS NULL
+        """,
+        (emp_id,),
+    )
     conn.commit()
     if cur.rowcount == 0:
         raise HTTPException(status_code=404, detail="not found")
@@ -198,6 +206,14 @@ def reset_employee_password(
         WHERE id=%s
         """,
         (pwd_hash, emp_id),
+    )
+    cur.execute(
+        """
+        UPDATE mobile_refresh_tokens
+        SET revoked_at = NOW(3)
+        WHERE employee_id=%s AND revoked_at IS NULL
+        """,
+        (emp_id,),
     )
     conn.commit()
     if cur.rowcount == 0:

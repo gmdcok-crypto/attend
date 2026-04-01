@@ -332,4 +332,9 @@ def auth_me(
     row = cur.fetchone()
     if not row:
         raise HTTPException(status_code=401, detail="사원을 찾을 수 없습니다.")
+    raw_auth = row.get("auth_status")
+    if isinstance(raw_auth, (bytes, bytearray)):
+        raw_auth = raw_auth.decode("ascii", errors="ignore")
+    if str(raw_auth).strip() != "O":
+        raise HTTPException(status_code=401, detail="인증이 해제되었습니다. 다시 로그인하세요.")
     return _serialize_me(row)
