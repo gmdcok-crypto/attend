@@ -538,9 +538,6 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
         </section>
 
         <section class="admin-view" id="view-leave-promotion" data-view="leave-promotion">
-          <div class="page-toolbar">
-            <p class="desc">연차촉진 대상자를 조회하고 1차/2차 촉진 발송 및 서명 현황을 관리합니다.</p>
-          </div>
           <div class="stat-grid leave-promo-stat-grid">
             <div class="stat-card">
               <div class="stat-label">대상자</div>
@@ -615,8 +612,8 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
                 </div>
               </div>
             </div>
-            <div class="crud-form-col">
-              <div class="form-panel panel">
+            <div class="crud-form-col crud-form-col--inline">
+              <div class="form-panel panel form-panel--inline leave-promo-config-form">
                 <div class="panel-hd"><h3>촉진 안내 설정</h3></div>
                 <div class="form-fields">
                   <div class="form-field">

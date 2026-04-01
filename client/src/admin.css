@@ -606,6 +606,10 @@ body {
   min-width: 4.8em;
 }
 
+.leave-promo-config-form {
+  position: static;
+}
+
 .leave-promo-layout {
   grid-template-columns: minmax(0, 68%) minmax(300px, 1fr);
 }
