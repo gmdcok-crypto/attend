@@ -104,6 +104,30 @@ def ensure_employee_leave_tables(conn: Connection) -> bool:
     return changed
 
 
+def ensure_employee_leave_quotas_initial_used_column(conn: Connection) -> bool:
+    """employee_leave_quotas.initial_used_days 없으면 추가 (도입 전 수동 사용일)."""
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT COLUMN_NAME FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND LOWER(TABLE_NAME) = 'employee_leave_quotas'
+        """
+    )
+    existing = {str(row[0]).lower() for row in (cur.fetchall() or [])}
+    if not existing:
+        return False
+    if "initial_used_days" in existing:
+        return False
+    cur.execute(
+        """
+        ALTER TABLE employee_leave_quotas
+        ADD COLUMN initial_used_days DECIMAL(7, 1) NOT NULL DEFAULT 0
+          COMMENT '도입 전 등 수동 초기 사용일(해당 연도·코드)' AFTER quota_days
+        """
+    )
+    return True
+
+
 def ensure_work_shift_types_table(conn: Connection) -> bool:
     """work_shift_types 없으면 생성."""
     cur = conn.cursor()

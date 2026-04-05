@@ -38,6 +38,7 @@ from backend.routes import (
 from backend.schema_ensure import (
     ensure_employee_auth_columns,
     ensure_employee_leave_tables,
+    ensure_employee_leave_quotas_initial_used_column,
     ensure_employee_pin_hash_column,
     ensure_leave_plan_requests_table,
     ensure_leave_promotion_tables,
@@ -78,6 +79,11 @@ async def _lifespan(app: FastAPI):
             if ensure_employee_leave_tables(conn):
                 conn.commit()
                 logger.warning("개인별 휴가 테이블(employee_leave_*)을 생성했습니다.")
+            if ensure_employee_leave_quotas_initial_used_column(conn):
+                conn.commit()
+                logger.warning(
+                    "employee_leave_quotas.initial_used_days 컬럼을 추가했습니다."
+                )
             if ensure_work_shift_types_table(conn):
                 conn.commit()
                 logger.warning("근무시간 유형 테이블(work_shift_types)을 생성했습니다.")

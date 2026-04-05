@@ -250,8 +250,16 @@ type MyLeaveSummary = {
     leave_name: string
     quota_days: number
     used_days: number
-    remaining_days: number
+    remaining_days: number | null
+    leave_code_id?: number
+    leave_code?: string
+    initial_used_days?: number
+    used_from_records_days?: number
   }>
+  totals?: {
+    used_days: number
+    remaining_days: number | null
+  }
 }
 
 type MyLeaveRecord = {
@@ -457,14 +465,14 @@ async function refreshLeaveSummary(): Promise<void> {
     const summary = await apiMobileJson<MyLeaveSummary>(`/api/employee-leaves/me/summary?year=${y}`)
     if (!summary.items.length) {
       body.innerHTML =
-        '<p class="leave-summary-empty">등록된 휴가 배정이 없습니다. 관리자에서 연도별 배정 후 확인할 수 있습니다.</p>'
+        '<p class="leave-summary-empty">등록된 휴가 배정·사용 기록이 없습니다. 관리자에서 연도별 배정을 하거나 휴가 사용 기록을 등록한 뒤 확인할 수 있습니다.</p>'
     } else {
       body.innerHTML = summary.items
         .map(
           (it) => `
         <div class="leave-summary-row">
           <span class="leave-summary-name">${escHtml(it.leave_name)}</span>
-          <span class="leave-summary-nums">배정 ${it.quota_days} · 사용 ${it.used_days} · 잔여 ${it.remaining_days}</span>
+          <span class="leave-summary-nums">배정 ${it.quota_days} · 사용 ${it.used_days} · 잔여 ${it.remaining_days != null ? it.remaining_days : '—'}</span>
         </div>`,
         )
         .join('')

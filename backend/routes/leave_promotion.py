@@ -13,14 +13,14 @@ from backend.database import Connection, DictCursor, get_db
 from backend.routes.employee_leaves import (
     _aggregate_workdays_by_year,
     _load_all_records_for_aggregate,
-    _load_quotas,
+    _load_quota_maps,
 )
 
 router = APIRouter(prefix="/leave-promotion", tags=["leave-promotion"])
 
 
 def _remaining_total_for_year(conn: Connection, emp_id: int, year: int) -> float | None:
-    quotas = _load_quotas(conn)
+    quotas, initials = _load_quota_maps(conn)
     all_rec = _load_all_records_for_aggregate(conn, [emp_id])
     agg = _aggregate_workdays_by_year(all_rec)
     total_rem = 0.0
@@ -30,8 +30,8 @@ def _remaining_total_for_year(conn: Connection, emp_id: int, year: int) -> float
         if eid != emp_id or y != year:
             continue
         any_q = True
-        used = agg.get(key, 0.0)
-        total_rem += float(qv) - float(used)
+        used = float(agg.get(key, 0.0)) + float(initials.get(key, 0.0))
+        total_rem += float(qv) - used
     if not any_q:
         return None
     return round(total_rem, 1)
