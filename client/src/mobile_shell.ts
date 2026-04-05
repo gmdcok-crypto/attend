@@ -78,12 +78,6 @@ export function attendAppMarkup(): string {
         <h1>기록</h1>
         <p class="sub">출퇴근 및 휴가 내역</p>
       </header>
-      <div class="leave-summary" id="leave-summary" aria-label="연차·휴가 요약">
-        <div class="leave-summary-hd" id="leave-summary-hd">연차·휴가 요약</div>
-        <div class="leave-summary-body" id="leave-summary-body">
-          <p class="leave-summary-empty">기록 탭을 열면 요약이 표시됩니다.</p>
-        </div>
-      </div>
       <div class="segment" role="tablist">
         <button type="button" class="is-on" data-seg="att">출퇴근</button>
         <button type="button" data-seg="leave">휴가</button>
@@ -125,24 +119,19 @@ export function attendAppMarkup(): string {
     <section class="screen" data-screen="more" aria-label="연차계획">
       <header class="screen-header">
         <h1>연차계획</h1>
-        <p class="sub">계정 및 설정</p>
+        <p class="sub">연차·휴가 현황</p>
       </header>
-      <div class="profile-block">
-        <div class="avatar" id="profile-avatar" aria-hidden="true">—</div>
-        <div>
-          <div class="name" id="profile-name">—</div>
-          <div class="meta" id="profile-meta">—</div>
+      <div class="leave-summary" id="leave-summary" aria-label="연차·휴가 요약">
+        <div class="leave-summary-hd" id="leave-summary-hd">연차·휴가 요약</div>
+        <div class="leave-summary-body" id="leave-summary-body">
+          <p class="leave-summary-empty">연차계획 탭을 열면 요약이 표시됩니다.</p>
         </div>
       </div>
       <nav class="menu-list">
         <button type="button" class="menu-item menu-item--btn" data-go-screen="leave-plan">
           연차사용 계획 <span class="chev">›</span>
         </button>
-        <a class="menu-item" href="#">알림 설정 <span class="chev">›</span></a>
-        <a class="menu-item" href="#">앱 정보 <span class="chev">›</span></a>
-        <a class="menu-item" href="#">문의하기 <span class="chev">›</span></a>
       </nav>
-      <button type="button" class="logout">로그아웃</button>
     </section>
 
     <section class="screen" data-screen="leave-plan" aria-label="연차사용 계획">
@@ -325,19 +314,15 @@ async function refreshLeavePlanScreen(): Promise<void> {
   }
 }
 
-async function refreshLeaveHistory(): Promise<void> {
+async function refreshLeaveSummary(): Promise<void> {
   const hd = document.getElementById('leave-summary-hd')
   const body = document.getElementById('leave-summary-body')
-  const listEl = document.getElementById('record-leave')
-  if (!body || !listEl) return
+  if (!body) return
   const y = new Date().getFullYear()
   if (hd) hd.textContent = `${y}년 연차·휴가`
   body.innerHTML = '<p class="leave-summary-empty">불러오는 중…</p>'
-  listEl.innerHTML =
-    '<div class="record-item record-item--placeholder"><div class="left"><div class="d">—</div><div class="t">불러오는 중…</div></div><span class="badge badge-muted">—</span></div>'
   try {
     const summary = await apiMobileJson<MyLeaveSummary>(`/api/employee-leaves/me/summary?year=${y}`)
-    const rows = await apiMobileJson<MyLeaveRecord[]>(`/api/employee-leaves/me?year=${y}`)
     if (!summary.items.length) {
       body.innerHTML =
         '<p class="leave-summary-empty">등록된 휴가 배정이 없습니다. 관리자에서 연도별 배정 후 확인할 수 있습니다.</p>'
@@ -352,6 +337,20 @@ async function refreshLeaveHistory(): Promise<void> {
         )
         .join('')
     }
+  } catch {
+    body.innerHTML =
+      '<p class="leave-summary-empty">연차·휴가 정보를 불러오지 못했습니다. 잠시 후 다시 시도하세요.</p>'
+  }
+}
+
+async function refreshHistoryLeaveRecords(): Promise<void> {
+  const listEl = document.getElementById('record-leave')
+  if (!listEl) return
+  const y = new Date().getFullYear()
+  listEl.innerHTML =
+    '<div class="record-item record-item--placeholder"><div class="left"><div class="d">—</div><div class="t">불러오는 중…</div></div><span class="badge badge-muted">—</span></div>'
+  try {
+    const rows = await apiMobileJson<MyLeaveRecord[]>(`/api/employee-leaves/me?year=${y}`)
     if (!rows.length) {
       listEl.innerHTML =
         '<div class="record-item record-item--placeholder"><div class="left"><div class="d">—</div><div class="t">해당 연도에 등록된 휴가 사용 기록이 없습니다.</div></div><span class="badge badge-muted">—</span></div>'
@@ -376,11 +375,13 @@ async function refreshLeaveHistory(): Promise<void> {
         .join('')
     }
   } catch {
-    body.innerHTML =
-      '<p class="leave-summary-empty">연차·휴가 정보를 불러오지 못했습니다. 잠시 후 다시 시도하세요.</p>'
     listEl.innerHTML =
       '<div class="record-item record-item--placeholder"><div class="left"><div class="d">—</div><div class="t">데이터를 불러오지 못했습니다.</div></div><span class="badge badge-muted">—</span></div>'
   }
+}
+
+async function refreshLeaveHistory(): Promise<void> {
+  await refreshHistoryLeaveRecords()
 }
 
 let pendingIntent: ScanIntent = null
@@ -414,19 +415,6 @@ function syncChromeForScreen(screenName: string) {
   if (tab) tab.hidden = fullAttend
 }
 
-function syncProfileFromSession() {
-  const s = readSession()
-  const nameEl = document.getElementById('profile-name')
-  const metaEl = document.getElementById('profile-meta')
-  const av = document.getElementById('profile-avatar')
-  if (nameEl && s) nameEl.textContent = s.name
-  if (metaEl && s) metaEl.textContent = `사번 ${s.employee_no}`
-  if (av && s?.name) {
-    const ch = s.name.trim().charAt(0)
-    av.textContent = ch || '—'
-  }
-}
-
 function setScreen(name: string) {
   const active = document.querySelector('.screen.is-active')
   const from = active?.getAttribute('data-screen')
@@ -455,6 +443,10 @@ function setScreen(name: string) {
 
   if (name === 'history') {
     void refreshLeaveHistory()
+  }
+
+  if (name === 'more') {
+    void refreshLeaveSummary()
   }
 
   if (name === 'leave-plan') {
@@ -681,12 +673,6 @@ export function wireAttendApp() {
     })()
   })
 
-  document.querySelector('.logout')?.addEventListener('click', () => {
-    clearSession()
-    window.location.href = INDEX_PAGE
-  })
-
-  syncProfileFromSession()
   void refreshTodayState().then(() => {
     updateHomeStatus()
     setScreen('home')
