@@ -135,11 +135,59 @@ export function attendAppMarkup(): string {
         </div>
       </div>
       <nav class="menu-list">
+        <button type="button" class="menu-item menu-item--btn" data-go-screen="leave-plan">
+          연차사용 계획 <span class="chev">›</span>
+        </button>
         <a class="menu-item" href="#">알림 설정 <span class="chev">›</span></a>
         <a class="menu-item" href="#">앱 정보 <span class="chev">›</span></a>
         <a class="menu-item" href="#">문의하기 <span class="chev">›</span></a>
       </nav>
       <button type="button" class="logout">로그아웃</button>
+    </section>
+
+    <section class="screen" data-screen="leave-plan" aria-label="연차사용 계획">
+      <header class="screen-header screen-header--with-back">
+        <button type="button" class="screen-back" data-back-screen="more" aria-label="뒤로">‹</button>
+        <div class="screen-header-text">
+          <h1>연차사용 계획</h1>
+          <p class="sub">사용 예정일을 등록합니다</p>
+        </div>
+      </header>
+      <div class="leave-plan-scroll">
+        <p class="leave-plan-msg" id="leave-plan-msg" role="status" hidden></p>
+        <div class="leave-plan-card">
+          <h2 class="leave-plan-card-title">새 계획</h2>
+          <label class="lp-field">
+            <span>휴가 종류</span>
+            <select id="lp-leave-code"></select>
+          </label>
+          <label class="lp-field">
+            <span>시작일</span>
+            <input type="date" id="lp-date-from" />
+          </label>
+          <label class="lp-field">
+            <span>종료일</span>
+            <input type="date" id="lp-date-to" />
+          </label>
+          <label class="lp-field">
+            <span>구분</span>
+            <select id="lp-unit">
+              <option value="FULL">종일</option>
+              <option value="AM">오전 반차</option>
+              <option value="PM">오후 반차</option>
+            </select>
+          </label>
+          <label class="lp-field">
+            <span>사유 (선택)</span>
+            <textarea id="lp-reason" rows="3" maxlength="500" placeholder="예: 가족 행사"></textarea>
+          </label>
+          <button type="button" class="btn-primary lp-submit" id="lp-btn-submit">계획 등록</button>
+        </div>
+        <h2 class="leave-plan-list-title">내 계획</h2>
+        <div class="leave-plan-list" id="leave-plan-list">
+          <p class="leave-plan-empty" id="leave-plan-empty">불러오는 중…</p>
+        </div>
+      </div>
     </section>
   </div>
   </div>
@@ -180,6 +228,18 @@ type MyLeaveRecord = {
   remaining_days: number | null
 }
 
+type LeaveCodeOption = { id: number; code: string; name: string }
+
+type LeavePlanRow = {
+  id: number
+  leave_name: string
+  date_from: string
+  date_to: string
+  leave_unit: string
+  reason: string
+  status: string
+}
+
 function escHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -193,6 +253,77 @@ function fmtYmdDot(iso: string): string {
   const p = d.split('-')
   if (p.length === 3) return `${p[0]}.${p[1]}.${p[2]}`
   return d
+}
+
+function leavePlanUnitLabel(u: string): string {
+  if (u === 'AM') return '오전 반차'
+  if (u === 'PM') return '오후 반차'
+  return '종일'
+}
+
+function showLeavePlanMsg(text: string, kind: 'ok' | 'err' | '' = ''): void {
+  const el = document.getElementById('leave-plan-msg')
+  if (!el) return
+  el.textContent = text
+  el.hidden = !text
+  el.classList.remove('leave-plan-msg--ok', 'leave-plan-msg--err')
+  if (kind === 'ok') el.classList.add('leave-plan-msg--ok')
+  if (kind === 'err') el.classList.add('leave-plan-msg--err')
+}
+
+async function refreshLeavePlanScreen(): Promise<void> {
+  const sel = document.getElementById('lp-leave-code') as HTMLSelectElement | null
+  const listEl = document.getElementById('leave-plan-list')
+  if (!sel || !listEl) return
+  showLeavePlanMsg('')
+  listEl.innerHTML = '<p class="leave-plan-empty" id="leave-plan-empty">불러오는 중…</p>'
+  try {
+    const codes = await apiMobileJson<LeaveCodeOption[]>('/api/leave-codes', { method: 'GET' })
+    const keep = sel.value
+    sel.innerHTML = ''
+    const opt0 = document.createElement('option')
+    opt0.value = ''
+    opt0.textContent = codes.length ? '휴가 종류 선택' : '등록된 휴가 코드 없음'
+    opt0.disabled = true
+    opt0.selected = true
+    sel.appendChild(opt0)
+    for (const c of codes) {
+      const o = document.createElement('option')
+      o.value = String(c.id)
+      o.textContent = `${c.code} · ${c.name}`
+      sel.appendChild(o)
+    }
+    if (keep && [...sel.options].some((o) => o.value === keep)) sel.value = keep
+
+    const plans = await apiMobileJson<LeavePlanRow[]>('/api/mobile/leave-plans', { method: 'GET' })
+    if (!plans.length) {
+      listEl.innerHTML =
+        '<p class="leave-plan-empty" id="leave-plan-empty">등록된 사용 계획이 없습니다.</p>'
+      return
+    }
+    listEl.innerHTML = plans
+      .map((p) => {
+        const range =
+          p.date_from.slice(0, 10) === p.date_to.slice(0, 10)
+            ? fmtYmdDot(p.date_from)
+            : `${fmtYmdDot(p.date_from)} ~ ${fmtYmdDot(p.date_to)}`
+        const sub = `${escHtml(p.leave_name)} · ${leavePlanUnitLabel(p.leave_unit)}`
+        const reason = p.reason?.trim() ? escHtml(p.reason.trim()) : '—'
+        return `<div class="leave-plan-item">
+          <div class="leave-plan-item-top">
+            <span class="leave-plan-item-date">${range}</span>
+            <span class="badge badge-in">${escHtml(p.status === 'PLANNED' ? '계획' : p.status)}</span>
+          </div>
+          <div class="leave-plan-item-sub">${sub}</div>
+          <div class="leave-plan-item-reason">사유: ${reason}</div>
+        </div>`
+      })
+      .join('')
+  } catch (e) {
+    showLeavePlanMsg(String(e), 'err')
+    listEl.innerHTML =
+      '<p class="leave-plan-empty" id="leave-plan-empty">목록을 불러오지 못했습니다.</p>'
+  }
 }
 
 async function refreshLeaveHistory(): Promise<void> {
@@ -325,6 +456,10 @@ function setScreen(name: string) {
 
   if (name === 'history') {
     void refreshLeaveHistory()
+  }
+
+  if (name === 'leave-plan') {
+    void refreshLeavePlanScreen()
   }
 
   if (name === 'scan') {
@@ -460,10 +595,16 @@ export function wireAttendApp() {
   })
 
   document.getElementById('main-shell')?.addEventListener('click', (e) => {
+    const back = (e.target as HTMLElement).closest('[data-back-screen]') as HTMLElement | null
+    if (back) {
+      const to = back.getAttribute('data-back-screen')
+      if (to) setScreen(to)
+      return
+    }
     const el = (e.target as HTMLElement).closest('[data-go-screen]') as HTMLElement | null
     if (!el) return
     const go = el.getAttribute('data-go-screen')
-    if (go === 'history' || go === 'more') setScreen(go)
+    if (go === 'history' || go === 'more' || go === 'leave-plan') setScreen(go)
   })
 
   document.querySelectorAll('.segment button').forEach((btn) => {
@@ -502,6 +643,47 @@ export function wireAttendApp() {
 
   document.getElementById('scan-cancel')?.addEventListener('click', () => {
     setScreen('home')
+  })
+
+  document.getElementById('lp-btn-submit')?.addEventListener('click', () => {
+    const sel = document.getElementById('lp-leave-code') as HTMLSelectElement | null
+    const fromEl = document.getElementById('lp-date-from') as HTMLInputElement | null
+    const toEl = document.getElementById('lp-date-to') as HTMLInputElement | null
+    const unitEl = document.getElementById('lp-unit') as HTMLSelectElement | null
+    const reasonEl = document.getElementById('lp-reason') as HTMLTextAreaElement | null
+    if (!sel || !fromEl || !toEl || !unitEl) return
+    const leave_code_id = parseInt(sel.value, 10)
+    const date_from = fromEl.value
+    const date_to = toEl.value
+    const leave_unit = unitEl.value as 'FULL' | 'AM' | 'PM'
+    const reason = reasonEl?.value?.trim() ?? ''
+    if (!leave_code_id) {
+      showLeavePlanMsg('휴가 종류를 선택하세요.', 'err')
+      return
+    }
+    if (!date_from || !date_to) {
+      showLeavePlanMsg('시작일과 종료일을 입력하세요.', 'err')
+      return
+    }
+    void (async () => {
+      try {
+        await apiMobileJson<{ id: number }>('/api/mobile/leave-plans', {
+          method: 'POST',
+          body: JSON.stringify({
+            leave_code_id,
+            date_from,
+            date_to,
+            leave_unit,
+            reason,
+          }),
+        })
+        showLeavePlanMsg('계획이 등록되었습니다.', 'ok')
+        if (reasonEl) reasonEl.value = ''
+        await refreshLeavePlanScreen()
+      } catch (err) {
+        showLeavePlanMsg(String(err), 'err')
+      }
+    })()
   })
 
   document.querySelector('.logout')?.addEventListener('click', () => {

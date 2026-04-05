@@ -134,6 +134,44 @@ def ensure_work_shift_types_table(conn: Connection) -> bool:
     return True
 
 
+def ensure_leave_plan_requests_table(conn: Connection) -> bool:
+    """leave_plan_requests 없으면 생성 (모바일 연차·휴가 사용 계획)."""
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT TABLE_NAME FROM information_schema.TABLES
+        WHERE TABLE_SCHEMA = DATABASE() AND LOWER(TABLE_NAME) = 'leave_plan_requests'
+        """
+    )
+    if cur.fetchone():
+        return False
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS leave_plan_requests (
+          id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+          employee_id BIGINT UNSIGNED NOT NULL,
+          leave_code_id BIGINT UNSIGNED NOT NULL,
+          date_from DATE NOT NULL,
+          date_to DATE NOT NULL,
+          leave_unit VARCHAR(8) NOT NULL DEFAULT 'FULL' COMMENT 'FULL|AM|PM',
+          reason VARCHAR(500) NULL,
+          status VARCHAR(24) NOT NULL DEFAULT 'PLANNED' COMMENT 'PLANNED 등',
+          created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+          updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+            ON UPDATE CURRENT_TIMESTAMP(3),
+          PRIMARY KEY (id),
+          KEY idx_lpr_emp (employee_id),
+          KEY idx_lpr_range (date_from, date_to),
+          CONSTRAINT fk_lpr_employee FOREIGN KEY (employee_id) REFERENCES employees (id)
+            ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT fk_lpr_leave_code FOREIGN KEY (leave_code_id) REFERENCES leave_codes (id)
+            ON DELETE RESTRICT ON UPDATE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """
+    )
+    return True
+
+
 def ensure_mobile_refresh_tokens_table(conn: Connection) -> bool:
     """mobile_refresh_tokens 없으면 생성."""
     cur = conn.cursor()

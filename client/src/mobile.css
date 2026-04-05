@@ -68,6 +68,32 @@ body {
   font-weight: 400;
 }
 
+.screen-header--with-back {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.screen-back {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  margin: -4px 0 0 -6px;
+  border: none;
+  background: none;
+  font-size: 1.75rem;
+  line-height: 1;
+  color: var(--text);
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.screen-header-text {
+  flex: 1;
+  min-width: 0;
+}
+
 /* 메인 스크롤 영역 — 활성 화면이 세로로 꽉 참 */
 .screens {
   flex: 1;
@@ -519,6 +545,124 @@ body {
   color: var(--text-muted);
 }
 
+/* ----- 연차사용 계획 ----- */
+.leave-plan-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 20px 24px;
+}
+
+.leave-plan-msg {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  font-size: 0.875rem;
+  border-radius: var(--radius-sm);
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--text);
+}
+
+.leave-plan-msg--ok {
+  background: rgba(5, 150, 105, 0.12);
+  color: var(--success);
+}
+
+.leave-plan-msg--err {
+  background: rgba(220, 38, 38, 0.1);
+  color: var(--danger);
+}
+
+.leave-plan-card {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  margin-bottom: 20px;
+}
+
+.leave-plan-card-title {
+  margin: 0 0 14px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.lp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.lp-field input,
+.lp-field select,
+.lp-field textarea {
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text);
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+
+.lp-field textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+.lp-submit {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.leave-plan-list-title {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.leave-plan-empty {
+  margin: 0;
+  padding: 16px 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.leave-plan-item {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.leave-plan-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.leave-plan-item-date {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.leave-plan-item-sub {
+  margin-top: 6px;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.leave-plan-item-reason {
+  margin-top: 6px;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
 .segment {
   display: flex;
   gap: 8px;
@@ -633,6 +777,17 @@ body {
   font-size: 0.9375rem;
   color: var(--text);
   text-decoration: none;
+}
+
+button.menu-item--btn {
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .menu-item span.chev {
