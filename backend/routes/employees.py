@@ -146,7 +146,10 @@ def update_employee(
         hd = date.fromisoformat(body.hire_date[:10])
     except ValueError as e:
         raise HTTPException(status_code=400, detail="입사일 형식이 올바르지 않습니다.") from e
-    cur = conn.cursor()
+    cur = conn.cursor(DictCursor)
+    cur.execute("SELECT id FROM employees WHERE id = %s LIMIT 1", (emp_id,))
+    if not cur.fetchone():
+        raise HTTPException(status_code=404, detail="사원을 찾을 수 없습니다.")
     cur.execute(
         """
         UPDATE employees
@@ -163,8 +166,7 @@ def update_employee(
         ),
     )
     conn.commit()
-    if cur.rowcount == 0:
-        raise HTTPException(status_code=404, detail="not found")
+    # 값이 동일하면 MySQL 이 영향 행 수 0 을 줄 수 있어 rowcount 로 404 를 내지 않는다.
     publish_employee_auth_changed(emp_id)
     return {"ok": True}
 
