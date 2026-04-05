@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from backend.database import Connection, DictCursor, get_db
+from backend.deps_mobile import get_mobile_employee_id
 
 router = APIRouter(prefix="/employee-leaves", tags=["employee-leaves"])
 
@@ -180,6 +181,80 @@ def list_employee_leaves(
     raw_rows = list(cur.fetchall() or [])
     emp_ids = list({int(r["employee_id"]) for r in raw_rows})
     all_for_agg = _load_all_records_for_aggregate(conn, emp_ids)
+    agg = _aggregate_workdays_by_year(all_for_agg)
+    quotas = _load_quotas(conn)
+    return [_serialize_row(r, agg, quotas) for r in raw_rows]
+
+
+@router.get("/me/summary")
+def my_leave_summary(
+    employee_id: int = Depends(get_mobile_employee_id),
+    year: Optional[int] = Query(None, description="기준 연도(기본: 올해)"),
+    conn: Connection = Depends(get_db),
+) -> dict:
+    """모바일: 본인 연도별 휴가 배정·사용·잔여 요약."""
+    today = date.today()
+    y = year if year is not None else today.year
+    cur = conn.cursor(DictCursor)
+    cur.execute(
+        """
+        SELECT lc.id AS leave_code_id, lc.code AS leave_code, lc.name AS leave_name,
+               q.quota_days
+        FROM employee_leave_quotas q
+        JOIN leave_codes lc ON lc.id = q.leave_code_id
+        WHERE q.employee_id = %s AND q.year_year = %s
+        ORDER BY lc.code
+        """,
+        (employee_id, y),
+    )
+    quota_rows = list(cur.fetchall() or [])
+    all_for_agg = _load_all_records_for_aggregate(conn, [employee_id])
+    agg = _aggregate_workdays_by_year(all_for_agg)
+    items: list[dict] = []
+    for r in quota_rows:
+        lc_id = int(r["leave_code_id"])
+        key = (employee_id, lc_id, y)
+        used = round(float(agg.get(key, 0.0)), 1)
+        qv = float(r["quota_days"])
+        items.append(
+            {
+                "leave_code_id": lc_id,
+                "leave_code": r["leave_code"],
+                "leave_name": r["leave_name"],
+                "quota_days": qv,
+                "used_days": used,
+                "remaining_days": round(qv - used, 1),
+            }
+        )
+    return {"year": y, "items": items}
+
+
+@router.get("/me")
+def list_my_employee_leaves(
+    employee_id: int = Depends(get_mobile_employee_id),
+    year: Optional[int] = Query(None, description="조회 연도(기본: 올해, 해당 연도와 겹치는 기록)"),
+    conn: Connection = Depends(get_db),
+) -> list[dict]:
+    """모바일: 본인 휴가(연차 등) 사용 기록."""
+    today = date.today()
+    y = year if year is not None else today.year
+    df = date(y, 1, 1)
+    dt = date(y, 12, 31)
+    cur = conn.cursor(DictCursor)
+    cur.execute(
+        """
+        SELECT r.id, r.employee_id, r.leave_code_id, r.start_date, r.end_date,
+               e.employee_no, e.name, lc.code AS leave_code, lc.name AS leave_name
+        FROM employee_leave_records r
+        JOIN employees e ON e.id = r.employee_id
+        JOIN leave_codes lc ON lc.id = r.leave_code_id
+        WHERE e.id = %s AND r.start_date <= %s AND r.end_date >= %s
+        ORDER BY r.start_date DESC, r.id DESC
+        """,
+        (employee_id, dt, df),
+    )
+    raw_rows = list(cur.fetchall() or [])
+    all_for_agg = _load_all_records_for_aggregate(conn, [employee_id])
     agg = _aggregate_workdays_by_year(all_for_agg)
     quotas = _load_quotas(conn)
     return [_serialize_row(r, agg, quotas) for r in raw_rows]

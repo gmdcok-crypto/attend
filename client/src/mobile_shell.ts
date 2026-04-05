@@ -78,6 +78,12 @@ export function attendAppMarkup(): string {
         <h1>기록</h1>
         <p class="sub">출퇴근 및 휴가 내역</p>
       </header>
+      <div class="leave-summary" id="leave-summary" aria-label="연차·휴가 요약">
+        <div class="leave-summary-hd" id="leave-summary-hd">연차·휴가 요약</div>
+        <div class="leave-summary-body" id="leave-summary-body">
+          <p class="leave-summary-empty">기록 탭을 열면 요약이 표시됩니다.</p>
+        </div>
+      </div>
       <div class="segment" role="tablist">
         <button type="button" class="is-on" data-seg="att">출퇴근</button>
         <button type="button" data-seg="leave">휴가</button>
@@ -106,19 +112,12 @@ export function attendAppMarkup(): string {
         </div>
       </div>
       <div class="record-list" id="record-leave" hidden>
-        <div class="record-item">
+        <div class="record-item record-item--placeholder">
           <div class="left">
-            <div class="d">2026.04.01 (수)</div>
-            <div class="t">연차 · 종일</div>
+            <div class="d">—</div>
+            <div class="t">휴가 기록을 불러오는 중입니다.</div>
           </div>
-          <span class="badge badge-in">승인</span>
-        </div>
-        <div class="record-item">
-          <div class="left">
-            <div class="d">2026.03.10 (화)</div>
-            <div class="t">반차 · 오후</div>
-          </div>
-          <span class="badge badge-in">승인</span>
+          <span class="badge badge-muted">—</span>
         </div>
       </div>
     </section>
@@ -160,6 +159,98 @@ type TodaySummary = {
   clocked_in: boolean
   last_in_at: string | null
   last_out_at: string | null
+}
+
+type MyLeaveSummary = {
+  year: number
+  items: Array<{
+    leave_name: string
+    quota_days: number
+    used_days: number
+    remaining_days: number
+  }>
+}
+
+type MyLeaveRecord = {
+  leave_name: string
+  start_date: string
+  end_date: string
+  work_days: number
+  total_days: number
+  remaining_days: number | null
+}
+
+function escHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function fmtYmdDot(iso: string): string {
+  const d = iso.length >= 10 ? iso.slice(0, 10) : iso
+  const p = d.split('-')
+  if (p.length === 3) return `${p[0]}.${p[1]}.${p[2]}`
+  return d
+}
+
+async function refreshLeaveHistory(): Promise<void> {
+  const hd = document.getElementById('leave-summary-hd')
+  const body = document.getElementById('leave-summary-body')
+  const listEl = document.getElementById('record-leave')
+  if (!body || !listEl) return
+  const y = new Date().getFullYear()
+  if (hd) hd.textContent = `${y}년 연차·휴가`
+  body.innerHTML = '<p class="leave-summary-empty">불러오는 중…</p>'
+  listEl.innerHTML =
+    '<div class="record-item record-item--placeholder"><div class="left"><div class="d">—</div><div class="t">불러오는 중…</div></div><span class="badge badge-muted">—</span></div>'
+  try {
+    const summary = await apiMobileJson<MyLeaveSummary>(`/api/employee-leaves/me/summary?year=${y}`)
+    const rows = await apiMobileJson<MyLeaveRecord[]>(`/api/employee-leaves/me?year=${y}`)
+    if (!summary.items.length) {
+      body.innerHTML =
+        '<p class="leave-summary-empty">등록된 휴가 배정이 없습니다. 관리자에서 연도별 배정 후 확인할 수 있습니다.</p>'
+    } else {
+      body.innerHTML = summary.items
+        .map(
+          (it) => `
+        <div class="leave-summary-row">
+          <span class="leave-summary-name">${escHtml(it.leave_name)}</span>
+          <span class="leave-summary-nums">배정 ${it.quota_days} · 사용 ${it.used_days} · 잔여 ${it.remaining_days}</span>
+        </div>`,
+        )
+        .join('')
+    }
+    if (!rows.length) {
+      listEl.innerHTML =
+        '<div class="record-item record-item--placeholder"><div class="left"><div class="d">—</div><div class="t">해당 연도에 등록된 휴가 사용 기록이 없습니다.</div></div><span class="badge badge-muted">—</span></div>'
+    } else {
+      listEl.innerHTML = rows
+        .map((r) => {
+          const range =
+            r.start_date.slice(0, 10) === r.end_date.slice(0, 10)
+              ? fmtYmdDot(r.start_date)
+              : `${fmtYmdDot(r.start_date)} ~ ${fmtYmdDot(r.end_date)}`
+          const sub = `${escHtml(r.leave_name)} · 근무일 ${r.work_days}일(주중)`
+          const badge =
+            r.remaining_days != null ? `잔여 ${r.remaining_days}일` : '—'
+          return `<div class="record-item">
+          <div class="left">
+            <div class="d">${range}</div>
+            <div class="t">${sub}</div>
+          </div>
+          <span class="badge badge-in">${escHtml(badge)}</span>
+        </div>`
+        })
+        .join('')
+    }
+  } catch {
+    body.innerHTML =
+      '<p class="leave-summary-empty">연차·휴가 정보를 불러오지 못했습니다. 잠시 후 다시 시도하세요.</p>'
+    listEl.innerHTML =
+      '<div class="record-item record-item--placeholder"><div class="left"><div class="d">—</div><div class="t">데이터를 불러오지 못했습니다.</div></div><span class="badge badge-muted">—</span></div>'
+  }
 }
 
 let pendingIntent: ScanIntent = null
@@ -231,6 +322,10 @@ function setScreen(name: string) {
     }
   })
   syncChromeForScreen(name)
+
+  if (name === 'history') {
+    void refreshLeaveHistory()
+  }
 
   if (name === 'scan') {
     queueMicrotask(() => void beginScanFlow())
