@@ -44,7 +44,7 @@ export function attendAppMarkup(): string {
         <div class="attend-home-spacer" aria-hidden="true"></div>
         <nav class="attend-home-bottom-nav" aria-label="바로가기">
           <button type="button" class="home-bottom-link" data-go-screen="history">기록</button>
-          <button type="button" class="home-bottom-link" data-go-screen="more">더보기</button>
+          <button type="button" class="home-bottom-link" data-go-screen="more">연차계획</button>
         </nav>
       </div>
     </section>
@@ -122,9 +122,9 @@ export function attendAppMarkup(): string {
       </div>
     </section>
 
-    <section class="screen" data-screen="more" aria-label="더보기">
+    <section class="screen" data-screen="more" aria-label="연차계획">
       <header class="screen-header">
-        <h1>더보기</h1>
+        <h1>연차계획</h1>
         <p class="sub">계정 및 설정</p>
       </header>
       <div class="profile-block">
@@ -194,9 +194,8 @@ export function attendAppMarkup(): string {
 
   <nav id="main-tab-bar" class="tab-bar" aria-label="하단 메뉴" hidden>
     <button type="button" class="tab is-active" data-tab="home" aria-current="page">홈</button>
-    <button type="button" class="tab" data-tab="scan">스캔</button>
     <button type="button" class="tab" data-tab="history">기록</button>
-    <button type="button" class="tab" data-tab="more">더보기</button>
+    <button type="button" class="tab" data-tab="more">연차계획</button>
   </nav>
 `
 }
@@ -586,11 +585,7 @@ export function wireAttendApp() {
     btn.addEventListener('click', () => {
       const name = btn.getAttribute('data-tab')
       if (!name) return
-      if (name === 'scan') {
-        openScan(null)
-      } else {
-        setScreen(name)
-      }
+      setScreen(name)
     })
   })
 

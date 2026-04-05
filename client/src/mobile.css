@@ -121,7 +121,7 @@ body {
   display: flex;
 }
 
-/* 출근 홈: 상단 정보 → 출근 버튼 → 여백 → 하단 기록·더보기 */
+/* 출근 홈: 상단 정보 → 출근 버튼 → 여백 → 하단 기록·연차계획 */
 .attend-home-page {
   flex: 1;
   display: flex;
@@ -732,7 +732,7 @@ body {
   color: var(--primary-dark);
 }
 
-/* ----- 더보기 ----- */
+/* ----- 연차계획 (more) ----- */
 .profile-block {
   display: flex;
   align-items: center;
