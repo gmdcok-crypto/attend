@@ -638,6 +638,8 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
                   </div>
                 </div>
                 <div class="form-actions">
+                  <button type="button" class="btn btn-primary" id="lp-btn-campaign-save">캠페인 등록</button>
+                  <button type="button" class="btn btn-ghost" id="lp-btn-add-all-targets">등록 사원 대상 추가</button>
                   <button type="button" class="btn btn-ghost" id="lp-btn-preview">미리보기</button>
                   <button type="button" class="btn btn-primary" id="lp-btn-send-first">1차 발송</button>
                   <button type="button" class="btn btn-update" id="lp-btn-send-second">2차 발송</button>
@@ -862,6 +864,7 @@ function showView(id: string) {
   else stopEmployeeAutoRefresh()
   if (id === 'raw') loadRawPanel().catch((e) => adminAlert(String(e)))
   if (id === 'leave-emp') refreshLeaveEmpView().catch((e) => adminAlert(String(e)))
+  if (id === 'leave-promotion') refreshLeavePromotionView().catch((e) => adminAlert(String(e)))
 }
 
 document.querySelector('.admin-nav')?.addEventListener('click', (e) => {
@@ -913,6 +916,31 @@ type EmpRow = {
   status: string
   auth_status: string
 }
+
+type LpCampaignRow = {
+  id: number
+  title: string
+  doc_version: string
+  doc_hash: string
+  created_at: string | null
+  target_count: number
+  signed_count: number
+  first_sent_count: number
+  second_sent_count: number
+}
+
+type LpTargetRow = {
+  employee_id: number
+  employee_no: string
+  name: string
+  department_name: string | null
+  remaining_days: number | null
+  read_at: string | null
+  signed_at: string | null
+  first_sent_at: string | null
+  second_sent_at: string | null
+}
+
 type AttEvent = {
   id: number
   event_type: string
@@ -1243,6 +1271,163 @@ async function loadRawPanel() {
     rawPanelWired = true
   }
   await loadRawEvents()
+}
+
+let latestLeavePromotionCampaignId: number | null = null
+
+function lpFmtDt(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  return iso.slice(0, 16).replace('T', ' ')
+}
+
+async function loadLeavePromotionDeptOptions() {
+  const sel = document.getElementById('lp-dept') as HTMLSelectElement | null
+  if (!sel) return
+  const rows = await apiJson<DeptRow[]>('/api/departments')
+  const keep = sel.value
+  sel.innerHTML = '<option value="">전체</option>'
+  for (const d of rows) {
+    const o = document.createElement('option')
+    o.value = d.name
+    o.textContent = d.name
+    sel.appendChild(o)
+  }
+  if (keep && [...sel.options].some((o) => o.value === keep)) sel.value = keep
+}
+
+async function runLeavePromotionSearch() {
+  const id = latestLeavePromotionCampaignId
+  const tb = document.getElementById('tbody-leave-promotion-targets')
+  if (!tb) return
+  if (!id) {
+    tb.innerHTML =
+      '<tr><td colspan="7" class="admin-empty-msg">캠페인을 등록한 뒤 조회하세요.</td></tr>'
+    return
+  }
+  const yearEl = document.getElementById('lp-year') as HTMLInputElement | null
+  const statusEl = document.getElementById('lp-status') as HTMLSelectElement | null
+  const year = yearEl?.value?.trim() || String(new Date().getFullYear())
+  const status = statusEl?.value?.trim() || ''
+  const q = new URLSearchParams({ year })
+  if (status) q.set('status', status)
+  const rows = await apiJson<LpTargetRow[]>(`/api/leave-promotion/campaigns/${id}/targets?${q.toString()}`)
+  const deptSel = document.getElementById('lp-dept') as HTMLSelectElement | null
+  const deptFilter = deptSel?.value?.trim() ?? ''
+  let filtered = rows
+  if (deptFilter) {
+    filtered = rows.filter((r) => (r.department_name || '') === deptFilter)
+  }
+  if (!filtered.length) {
+    tb.innerHTML =
+      '<tr><td colspan="7" class="admin-empty-msg">조건에 맞는 대상이 없습니다.</td></tr>'
+    return
+  }
+  tb.innerHTML = filtered
+    .map(
+      (r) => `<tr>
+      <td>${escapeHtml(r.employee_no)}</td>
+      <td>${escapeHtml(r.name)}</td>
+      <td>${escapeHtml(r.department_name ?? '')}</td>
+      <td>${r.remaining_days != null ? escapeHtml(String(r.remaining_days)) : '—'}</td>
+      <td>${escapeHtml(lpFmtDt(r.first_sent_at))}</td>
+      <td>${escapeHtml(lpFmtDt(r.second_sent_at))}</td>
+      <td>${r.signed_at ? '서명완료' : '미서명'}</td>
+    </tr>`,
+    )
+    .join('')
+}
+
+async function refreshLeavePromotionView() {
+  await loadLeavePromotionDeptOptions()
+  const campaigns = await apiJson<LpCampaignRow[]>('/api/leave-promotion/campaigns')
+  const c = campaigns[0]
+  latestLeavePromotionCampaignId = c?.id ?? null
+  const stT = document.getElementById('lp-stat-target')
+  const stP = document.getElementById('lp-stat-pending')
+  const st1 = document.getElementById('lp-stat-first')
+  const st2 = document.getElementById('lp-stat-second')
+  if (stT) stT.textContent = c ? String(c.target_count) : '0'
+  if (stP) stP.textContent = c ? String(Math.max(0, c.target_count - c.signed_count)) : '0'
+  if (st1) st1.textContent = c ? String(c.first_sent_count) : '0'
+  if (st2) st2.textContent = c ? String(c.second_sent_count) : '0'
+  await runLeavePromotionSearch()
+}
+
+function wireLeavePromotion() {
+  bindButtonById('lp-btn-search', '연차촉진', () => {
+    void runLeavePromotionSearch().catch((e) => adminAlert(String(e)))
+  })
+  bindButtonById('lp-btn-campaign-save', '연차촉진', () => {
+    const title =
+      (document.getElementById('lp-campaign-title') as HTMLInputElement | null)?.value?.trim() ?? ''
+    const docVersion =
+      (document.getElementById('lp-doc-version') as HTMLInputElement | null)?.value?.trim() || 'v1.0'
+    const message = (document.getElementById('lp-message') as HTMLTextAreaElement | null)?.value ?? ''
+    if (!title || !message.trim()) {
+      adminAlert('제목과 안내 문구를 입력하세요.')
+      return
+    }
+    void apiJson<{ id: number }>('/api/leave-promotion/campaigns', {
+      method: 'POST',
+      body: JSON.stringify({ title, message, doc_version: docVersion }),
+    })
+      .then(() => refreshLeavePromotionView())
+      .then(() => adminAlert('캠페인이 등록되었습니다.'))
+      .catch((err) => adminAlert(String(err)))
+  })
+  bindButtonById('lp-btn-add-all-targets', '연차촉진', () => {
+    void (async () => {
+      const campaigns = await apiJson<LpCampaignRow[]>('/api/leave-promotion/campaigns')
+      const cid = campaigns[0]?.id
+      if (!cid) {
+        adminAlert('먼저 캠페인을 등록하세요.')
+        return
+      }
+      const emps = await apiJson<EmpRow[]>('/api/employees')
+      const ids = emps.map((e) => e.id)
+      if (!ids.length) {
+        adminAlert('등록된 사원이 없습니다.')
+        return
+      }
+      await apiJson<{ added: number }>(`/api/leave-promotion/campaigns/${cid}/targets`, {
+        method: 'POST',
+        body: JSON.stringify({ employee_ids: ids }),
+      })
+      await refreshLeavePromotionView()
+      adminAlert('등록된 사원을 촉진 대상에 반영했습니다.')
+    })().catch((e) => adminAlert(String(e)))
+  })
+  bindButtonById('lp-btn-send-first', '연차촉진', () => {
+    void (async () => {
+      const campaigns = await apiJson<LpCampaignRow[]>('/api/leave-promotion/campaigns')
+      const cid = campaigns[0]?.id
+      if (!cid) {
+        adminAlert('캠페인이 없습니다.')
+        return
+      }
+      await apiJson(`/api/leave-promotion/campaigns/${cid}/send-first`, { method: 'POST' })
+      await refreshLeavePromotionView()
+      adminAlert('1차 발송 시각이 기록되었습니다.')
+    })().catch((e) => adminAlert(String(e)))
+  })
+  bindButtonById('lp-btn-send-second', '연차촉진', () => {
+    void (async () => {
+      const campaigns = await apiJson<LpCampaignRow[]>('/api/leave-promotion/campaigns')
+      const cid = campaigns[0]?.id
+      if (!cid) {
+        adminAlert('캠페인이 없습니다.')
+        return
+      }
+      await apiJson(`/api/leave-promotion/campaigns/${cid}/send-second`, { method: 'POST' })
+      await refreshLeavePromotionView()
+      adminAlert('2차 발송 시각이 기록되었습니다.')
+    })().catch((e) => adminAlert(String(e)))
+  })
+  document.getElementById('lp-btn-preview')?.addEventListener('click', () => {
+    const title = (document.getElementById('lp-campaign-title') as HTMLInputElement | null)?.value ?? ''
+    const message = (document.getElementById('lp-message') as HTMLTextAreaElement | null)?.value ?? ''
+    adminAlert(`${title}\n\n${message}`.slice(0, 2000))
+  })
 }
 
 function wireCrudDept() {
@@ -2127,6 +2312,7 @@ wireCrudDept()
 wireCrudEmployees()
 wireCrudLeave()
 wireCrudWorkShift()
+wireLeavePromotion()
 wireLeaveEmp()
 initRawToolbarDates()
 startDashboardAutoRefresh()

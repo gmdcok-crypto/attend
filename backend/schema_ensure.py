@@ -172,6 +172,97 @@ def ensure_leave_plan_requests_table(conn: Connection) -> bool:
     return True
 
 
+def ensure_employee_pin_hash_column(conn: Connection) -> bool:
+    """employees.pin_hash 없으면 추가 (모바일 연차촉진 전자서명 PIN)."""
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT COLUMN_NAME
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND LOWER(TABLE_NAME) = 'employees'
+        """
+    )
+    existing = {str(row[0]).lower() for row in (cur.fetchall() or [])}
+    if "pin_hash" in existing:
+        return False
+    cur.execute(
+        """
+        ALTER TABLE employees
+        ADD COLUMN pin_hash VARCHAR(255) NULL COMMENT '연차촉진 등 6자리 PIN bcrypt' AFTER password_hash
+        """
+    )
+    return True
+
+
+def ensure_leave_promotion_tables(conn: Connection) -> bool:
+    """leave_promotion_* 테이블 생성 (연차촉진 캠페인·대상·서명)."""
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT TABLE_NAME FROM information_schema.TABLES
+        WHERE TABLE_SCHEMA = DATABASE() AND LOWER(TABLE_NAME) = 'leave_promotion_campaigns'
+        """
+    )
+    if cur.fetchone():
+        return False
+
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS leave_promotion_campaigns (
+          id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+          title VARCHAR(255) NOT NULL,
+          doc_version VARCHAR(32) NOT NULL DEFAULT 'v1.0',
+          message_text TEXT NOT NULL,
+          doc_hash CHAR(64) NOT NULL COMMENT 'SHA-256(제목+버전+본문)',
+          created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+          PRIMARY KEY (id),
+          KEY idx_lpc_created (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """
+    )
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS leave_promotion_targets (
+          id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+          campaign_id BIGINT UNSIGNED NOT NULL,
+          employee_id BIGINT UNSIGNED NOT NULL,
+          read_at DATETIME(3) NULL,
+          signed_at DATETIME(3) NULL,
+          first_sent_at DATETIME(3) NULL,
+          second_sent_at DATETIME(3) NULL,
+          created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+          PRIMARY KEY (id),
+          UNIQUE KEY uk_lpt_camp_emp (campaign_id, employee_id),
+          KEY idx_lpt_emp (employee_id),
+          CONSTRAINT fk_lpt_campaign FOREIGN KEY (campaign_id) REFERENCES leave_promotion_campaigns (id)
+            ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT fk_lpt_employee FOREIGN KEY (employee_id) REFERENCES employees (id)
+            ON DELETE CASCADE ON UPDATE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """
+    )
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS leave_promotion_signatures (
+          id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+          campaign_id BIGINT UNSIGNED NOT NULL,
+          employee_id BIGINT UNSIGNED NOT NULL,
+          doc_hash CHAR(64) NOT NULL,
+          signed_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+          client_ip VARCHAR(45) NULL,
+          user_agent VARCHAR(512) NULL,
+          PRIMARY KEY (id),
+          KEY idx_lps_camp_emp (campaign_id, employee_id),
+          CONSTRAINT fk_lps_campaign FOREIGN KEY (campaign_id) REFERENCES leave_promotion_campaigns (id)
+            ON DELETE CASCADE ON UPDATE CASCADE,
+          CONSTRAINT fk_lps_employee FOREIGN KEY (employee_id) REFERENCES employees (id)
+            ON DELETE CASCADE ON UPDATE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """
+    )
+    return True
+
+
 def ensure_mobile_refresh_tokens_table(conn: Connection) -> bool:
     """mobile_refresh_tokens 없으면 생성."""
     cur = conn.cursor()

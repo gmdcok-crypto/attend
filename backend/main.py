@@ -30,13 +30,17 @@ from backend.routes import (
     employees,
     kiosk,
     leave_codes,
+    leave_promotion,
     mobile_leave_plans,
+    mobile_leave_promotion,
     work_shifts,
 )
 from backend.schema_ensure import (
     ensure_employee_auth_columns,
     ensure_employee_leave_tables,
+    ensure_employee_pin_hash_column,
     ensure_leave_plan_requests_table,
+    ensure_leave_promotion_tables,
     ensure_mobile_refresh_tokens_table,
     ensure_work_shift_types_table,
 )
@@ -83,6 +87,12 @@ async def _lifespan(app: FastAPI):
             if ensure_leave_plan_requests_table(conn):
                 conn.commit()
                 logger.warning("연차사용 계획 테이블(leave_plan_requests)을 생성했습니다.")
+            if ensure_employee_pin_hash_column(conn):
+                conn.commit()
+                logger.warning("employees.pin_hash 컬럼을 추가했습니다.")
+            if ensure_leave_promotion_tables(conn):
+                conn.commit()
+                logger.warning("연차촉진 테이블(leave_promotion_*)을 생성했습니다.")
         except Exception as e:  # noqa: BLE001
             conn.rollback()
             logger.error("스키마 보강 실패 (DB 확인): %s", e)
@@ -123,6 +133,9 @@ app.include_router(departments.router, prefix="/api")
 app.include_router(leave_codes.router, prefix="/api")
 app.include_router(employee_leaves.router, prefix="/api")
 app.include_router(mobile_leave_plans.router, prefix="/api")
+app.include_router(leave_promotion.router, prefix="/api")
+app.include_router(mobile_leave_promotion.pin_router, prefix="/api")
+app.include_router(mobile_leave_promotion.lp_router, prefix="/api")
 app.include_router(employees.router, prefix="/api")
 app.include_router(attendance.router, prefix="/api")
 app.include_router(attendance_clock.router, prefix="/api")

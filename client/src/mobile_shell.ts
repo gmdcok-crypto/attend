@@ -128,6 +128,9 @@ export function attendAppMarkup(): string {
         </div>
       </div>
       <nav class="menu-list">
+        <button type="button" class="menu-item menu-item--btn" data-go-screen="leave-promo">
+          연차촉진 전자서명 <span class="chev">›</span>
+        </button>
         <button type="button" class="menu-item menu-item--btn" data-go-screen="leave-plan">
           연차사용 계획 <span class="chev">›</span>
         </button>
@@ -175,6 +178,50 @@ export function attendAppMarkup(): string {
         <h2 class="leave-plan-list-title">내 계획</h2>
         <div class="leave-plan-list" id="leave-plan-list">
           <p class="leave-plan-empty" id="leave-plan-empty">불러오는 중…</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="leave-promo" aria-label="연차촉진 전자서명">
+      <header class="screen-header screen-header--with-back">
+        <button type="button" class="screen-back" data-back-screen="more" aria-label="뒤로">‹</button>
+        <div class="screen-header-text">
+          <h1>연차촉진</h1>
+          <p class="sub">안내문 확인 및 전자서명</p>
+        </div>
+      </header>
+      <div class="leave-promo-scroll">
+        <p class="leave-promo-msg" id="lpromo-msg" role="status" hidden></p>
+        <p class="leave-promo-empty" id="lpromo-empty">불러오는 중…</p>
+        <div id="lpromo-main" hidden>
+          <div class="lpromo-doc">
+            <h2 class="lpromo-doc-title" id="lpromo-title"></h2>
+            <p class="lpromo-meta" id="lpromo-version"></p>
+            <pre class="lpromo-body" id="lpromo-message"></pre>
+          </div>
+          <div class="lpromo-pin-setup" id="lpromo-pin-setup" hidden>
+            <p class="lpromo-hint">전자서명 전에 6자리 PIN을 설정합니다.</p>
+            <label class="lp-field">
+              <span>PIN (6자리)</span>
+              <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="lpromo-pin-new" autocomplete="new-password" />
+            </label>
+            <label class="lp-field">
+              <span>PIN 확인</span>
+              <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="lpromo-pin-new2" autocomplete="new-password" />
+            </label>
+            <button type="button" class="btn-primary" id="lpromo-btn-pin-save">PIN 저장</button>
+          </div>
+          <div class="lpromo-sign-block" id="lpromo-sign-block" hidden>
+            <p class="lpromo-signed" id="lpromo-signed-note" hidden>전자서명이 완료되었습니다.</p>
+            <div id="lpromo-sign-form">
+              <p class="lpromo-hint">안내를 확인하셨다면 PIN으로 서명합니다.</p>
+              <label class="lp-field">
+                <span>PIN</span>
+                <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" id="lpromo-pin-sign" autocomplete="one-time-code" />
+              </label>
+              <button type="button" class="btn-primary" id="lpromo-btn-sign">전자서명 완료</button>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -228,6 +275,23 @@ type LeavePlanRow = {
   status: string
 }
 
+type LeavePromoCampaign = {
+  id: number
+  title: string
+  doc_version: string
+  message: string
+  doc_hash: string
+  read_at: string | null
+  signed_at: string | null
+}
+
+type LeavePromoCurrent = {
+  has_pin: boolean
+  campaign: LeavePromoCampaign | null
+}
+
+let leavePromoCampaignId: number | null = null
+
 function escHtml(s: string): string {
   return s
     .replace(/&/g, '&amp;')
@@ -247,6 +311,74 @@ function leavePlanUnitLabel(u: string): string {
   if (u === 'AM') return '오전 반차'
   if (u === 'PM') return '오후 반차'
   return '종일'
+}
+
+function showLpromoMsg(text: string, kind: 'ok' | 'err' | '' = ''): void {
+  const el = document.getElementById('lpromo-msg')
+  if (!el) return
+  el.textContent = text
+  el.hidden = !text
+  el.classList.remove('leave-promo-msg--ok', 'leave-promo-msg--err')
+  if (kind === 'ok') el.classList.add('leave-promo-msg--ok')
+  if (kind === 'err') el.classList.add('leave-promo-msg--err')
+}
+
+async function refreshLeavePromoScreen(): Promise<void> {
+  const emptyEl = document.getElementById('lpromo-empty')
+  const mainEl = document.getElementById('lpromo-main')
+  const pinSetup = document.getElementById('lpromo-pin-setup')
+  const signBlock = document.getElementById('lpromo-sign-block')
+  const signedNote = document.getElementById('lpromo-signed-note')
+  const signForm = document.getElementById('lpromo-sign-form')
+  showLpromoMsg('')
+  leavePromoCampaignId = null
+  if (!emptyEl || !mainEl) return
+  emptyEl.hidden = false
+  emptyEl.textContent = '불러오는 중…'
+  mainEl.hidden = true
+  if (pinSetup) pinSetup.hidden = true
+  if (signBlock) signBlock.hidden = true
+  try {
+    const data = await apiMobileJson<LeavePromoCurrent>('/api/mobile/leave-promotion/current', {
+      method: 'GET',
+    })
+    if (!data.campaign) {
+      emptyEl.textContent = '연차촉진 대상으로 등록된 안내가 없습니다. 관리자에게 문의하세요.'
+      mainEl.hidden = true
+      return
+    }
+    const c = data.campaign
+    leavePromoCampaignId = c.id
+    emptyEl.hidden = true
+    mainEl.hidden = false
+    const titleEl = document.getElementById('lpromo-title')
+    const verEl = document.getElementById('lpromo-version')
+    const msgEl = document.getElementById('lpromo-message')
+    if (titleEl) titleEl.textContent = c.title
+    if (verEl) verEl.textContent = `문서 버전 ${c.doc_version} · 해시 ${c.doc_hash.slice(0, 12)}…`
+    if (msgEl) msgEl.textContent = c.message
+
+    await apiMobileJson(`/api/mobile/leave-promotion/${c.id}/read`, { method: 'POST' })
+
+    const signed = Boolean(c.signed_at)
+    if (signedNote) signedNote.hidden = !signed
+    if (signForm) signForm.hidden = signed
+    if (signBlock) signBlock.hidden = false
+
+    if (signed) {
+      if (pinSetup) pinSetup.hidden = true
+    } else if (!data.has_pin) {
+      if (pinSetup) pinSetup.hidden = false
+      if (signBlock) signBlock.hidden = true
+    } else {
+      if (pinSetup) pinSetup.hidden = true
+      if (signBlock) signBlock.hidden = false
+      if (signForm) signForm.hidden = false
+    }
+  } catch (e) {
+    emptyEl.textContent = String(e)
+    mainEl.hidden = true
+  }
 }
 
 function showLeavePlanMsg(text: string, kind: 'ok' | 'err' | '' = ''): void {
@@ -453,6 +585,10 @@ function setScreen(name: string) {
     void refreshLeavePlanScreen()
   }
 
+  if (name === 'leave-promo') {
+    void refreshLeavePromoScreen()
+  }
+
   if (name === 'scan') {
     queueMicrotask(() => void beginScanFlow())
   }
@@ -591,7 +727,7 @@ export function wireAttendApp() {
     const el = (e.target as HTMLElement).closest('[data-go-screen]') as HTMLElement | null
     if (!el) return
     const go = el.getAttribute('data-go-screen')
-    if (go === 'history' || go === 'more' || go === 'leave-plan') setScreen(go)
+    if (go === 'history' || go === 'more' || go === 'leave-plan' || go === 'leave-promo') setScreen(go)
   })
 
   document.querySelectorAll('.segment button').forEach((btn) => {
@@ -630,6 +766,62 @@ export function wireAttendApp() {
 
   document.getElementById('scan-cancel')?.addEventListener('click', () => {
     setScreen('home')
+  })
+
+  document.getElementById('lpromo-btn-pin-save')?.addEventListener('click', () => {
+    const a = document.getElementById('lpromo-pin-new') as HTMLInputElement | null
+    const b = document.getElementById('lpromo-pin-new2') as HTMLInputElement | null
+    const p1 = a?.value?.trim() ?? ''
+    const p2 = b?.value?.trim() ?? ''
+    if (!/^\d{6}$/.test(p1)) {
+      showLpromoMsg('PIN은 6자리 숫자입니다.', 'err')
+      return
+    }
+    if (p1 !== p2) {
+      showLpromoMsg('PIN과 확인이 일치하지 않습니다.', 'err')
+      return
+    }
+    void (async () => {
+      try {
+        await apiMobileJson('/api/mobile/pin/setup', {
+          method: 'POST',
+          body: JSON.stringify({ pin: p1 }),
+        })
+        showLpromoMsg('PIN이 저장되었습니다.', 'ok')
+        if (a) a.value = ''
+        if (b) b.value = ''
+        await refreshLeavePromoScreen()
+      } catch (err) {
+        showLpromoMsg(String(err), 'err')
+      }
+    })()
+  })
+
+  document.getElementById('lpromo-btn-sign')?.addEventListener('click', () => {
+    const pinEl = document.getElementById('lpromo-pin-sign') as HTMLInputElement | null
+    const pin = pinEl?.value?.trim() ?? ''
+    const cid = leavePromoCampaignId
+    if (!cid) {
+      showLpromoMsg('안내 정보가 없습니다.', 'err')
+      return
+    }
+    if (!/^\d{6}$/.test(pin)) {
+      showLpromoMsg('PIN은 6자리 숫자입니다.', 'err')
+      return
+    }
+    void (async () => {
+      try {
+        await apiMobileJson(`/api/mobile/leave-promotion/${cid}/sign`, {
+          method: 'POST',
+          body: JSON.stringify({ pin }),
+        })
+        showLpromoMsg('전자서명이 완료되었습니다.', 'ok')
+        if (pinEl) pinEl.value = ''
+        await refreshLeavePromoScreen()
+      } catch (err) {
+        showLpromoMsg(String(err), 'err')
+      }
+    })()
   })
 
   document.getElementById('lp-btn-submit')?.addEventListener('click', () => {
