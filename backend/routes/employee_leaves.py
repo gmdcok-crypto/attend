@@ -298,7 +298,13 @@ def update_employee_leave(
         raise HTTPException(status_code=400, detail="날짜 형식이 올바르지 않습니다.") from e
     if ed < sd:
         raise HTTPException(status_code=400, detail="휴가 종료일은 시작일 이후여야 합니다.")
-    cur = conn.cursor()
+    cur = conn.cursor(DictCursor)
+    cur.execute(
+        "SELECT id FROM employee_leave_records WHERE id = %s LIMIT 1",
+        (record_id,),
+    )
+    if not cur.fetchone():
+        raise HTTPException(status_code=404, detail="해당 휴가 기록을 찾을 수 없습니다.")
     cur.execute(
         """
         UPDATE employee_leave_records
@@ -308,8 +314,7 @@ def update_employee_leave(
         (emp_id, body.leave_code_id, sd, ed, record_id),
     )
     conn.commit()
-    if cur.rowcount == 0:
-        raise HTTPException(status_code=404, detail="not found")
+    # MySQL 은 값이 동일하면 변경 행 수를 0으로 돌려줄 수 있어 rowcount 로 404 를 내지 않는다.
     return {"ok": True}
 
 
