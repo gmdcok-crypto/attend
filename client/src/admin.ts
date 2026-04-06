@@ -624,7 +624,14 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
             <div class="crud-table-col">
               <div class="panel leave-promo-filter-panel">
                 <div class="panel-hd"><h3>대상 조회</h3></div>
-                <p class="empty-hint">조건을 설정한 뒤 조회 버튼을 눌러 연차촉진 대상자를 확인하세요.</p>
+                <p class="empty-hint">
+                  오른쪽에서 조건을 고른 뒤 <strong>조회</strong>를 누르거나, 아래 버튼으로 목록을 불러옵니다.
+                </p>
+                <div class="form-actions leave-promo-filter-actions">
+                  <button type="button" class="btn btn-primary" id="lp-btn-search-primary">
+                    조회
+                  </button>
+                </div>
               </div>
             </div>
             <div class="crud-form-col crud-form-col--inline">
@@ -1356,15 +1363,22 @@ async function loadLeavePromotionDeptOptions() {
   if (keep && [...sel.options].some((o) => o.value === keep)) sel.value = keep
 }
 
-async function runLeavePromotionSearch() {
+async function runLeavePromotionSearch(showAlertWhenNoCampaign = false) {
   const id = latestLeavePromotionCampaignId
   const tb = document.getElementById('tbody-leave-promotion-targets')
   if (!tb) return
   if (!id) {
     tb.innerHTML =
       '<tr><td colspan="7" class="admin-empty-msg">캠페인을 등록한 뒤 조회하세요.</td></tr>'
+    if (showAlertWhenNoCampaign) {
+      adminAlert(
+        '연차촉진 캠페인이 없습니다. 아래 「촉진 안내 설정」에서 캠페인을 등록한 뒤 다시 조회하세요.',
+      )
+    }
     return
   }
+  tb.innerHTML =
+    '<tr><td colspan="7" class="admin-empty-msg">불러오는 중…</td></tr>'
   const yearEl = document.getElementById('lp-year') as HTMLInputElement | null
   const statusEl = document.getElementById('lp-status') as HTMLSelectElement | null
   const year = yearEl?.value?.trim() || String(new Date().getFullYear())
@@ -1415,9 +1429,11 @@ async function refreshLeavePromotionView() {
 }
 
 function wireLeavePromotion() {
-  bindButtonById('lp-btn-search', '연차촉진', () => {
-    void runLeavePromotionSearch().catch((e) => adminAlert(String(e)))
-  })
+  const runSearch = () => {
+    void runLeavePromotionSearch(true).catch((e) => adminAlert(String(e)))
+  }
+  bindButtonById('lp-btn-search', '연차촉진', runSearch)
+  bindButtonById('lp-btn-search-primary', '연차촉진', runSearch)
   bindButtonById('lp-btn-campaign-save', '연차촉진', () => {
     const title =
       (document.getElementById('lp-campaign-title') as HTMLInputElement | null)?.value?.trim() ?? ''

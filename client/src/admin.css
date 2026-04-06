@@ -589,8 +589,13 @@ body {
 }
 
 .leave-promo-filter-panel .empty-hint {
-  padding: 30px 22px;
+  padding: 16px 22px 12px;
   text-align: left;
+}
+
+.leave-promo-filter-actions {
+  padding: 0 22px 22px;
+  margin: 0;
 }
 
 .leave-promo-query-layout {
