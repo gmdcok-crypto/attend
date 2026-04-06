@@ -636,7 +636,7 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
                 </div>
               </div>
             </div>
-            <div class="crud-form-col crud-form-col--inline">
+            <div class="crud-form-col crud-form-col--inline leave-promo-right-col">
               <div class="form-panel panel form-panel--inline leave-promo-query-form">
                 <div class="panel-hd"><h3>조회 조건</h3></div>
                 <div class="form-fields form-fields--inline-rows">
@@ -663,10 +663,6 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
                   <button type="button" class="btn btn-primary" id="lp-btn-search">조회</button>
                 </div>
               </div>
-            </div>
-          </div>
-          <div class="crud-layout leave-promo-layout leave-promo-layout--config-only">
-            <div class="crud-form-col crud-form-col--inline">
               <div class="form-panel panel form-panel--inline leave-promo-config-form">
                 <div class="panel-hd"><h3>촉진 안내 설정</h3></div>
                 <div class="form-fields">

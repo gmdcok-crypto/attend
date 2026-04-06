@@ -591,6 +591,13 @@ body {
   align-items: start;
 }
 
+.leave-promo-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
 .leave-promo-query-form {
   position: static;
 }
@@ -601,15 +608,6 @@ body {
 
 .leave-promo-config-form {
   position: static;
-}
-
-.leave-promo-layout {
-  grid-template-columns: minmax(0, 68%) minmax(300px, 1fr);
-}
-
-.leave-promo-layout--config-only {
-  grid-template-columns: minmax(0, 1fr);
-  max-width: 720px;
 }
 
 #table-leave-promotion-targets th,
@@ -724,10 +722,6 @@ body {
   }
 
   .crud-layout--leave-emp {
-    grid-template-columns: 1fr;
-  }
-
-  .leave-promo-layout {
     grid-template-columns: 1fr;
   }
 
