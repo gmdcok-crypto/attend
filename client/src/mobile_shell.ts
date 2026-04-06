@@ -378,31 +378,40 @@ async function loadLeavePromoPdf(): Promise<void> {
   }
 }
 
-async function refreshLeavePromoScreen(): Promise<void> {
+/**
+ * 연차촉진 화면 데이터 갱신.
+ * - `soft`: PIN 저장·서명 직후 등 — 본문을 숨기지 않아 깜빡임·빈 화면을 줄임.
+ */
+async function refreshLeavePromoScreen(soft = false): Promise<void> {
   const emptyEl = document.getElementById('lpromo-empty')
   const mainEl = document.getElementById('lpromo-main')
   const pinSetup = document.getElementById('lpromo-pin-setup')
   const signBlock = document.getElementById('lpromo-sign-block')
   const signedNote = document.getElementById('lpromo-signed-note')
   const signForm = document.getElementById('lpromo-sign-form')
-  showLpromoMsg('')
-  leavePromoCampaignId = null
-  if (leavePromoPdfObjectUrl) {
-    URL.revokeObjectURL(leavePromoPdfObjectUrl)
-    leavePromoPdfObjectUrl = null
-  }
   if (!emptyEl || !mainEl) return
-  emptyEl.hidden = false
-  emptyEl.textContent = '불러오는 중…'
-  mainEl.hidden = true
-  if (pinSetup) pinSetup.hidden = true
-  if (signBlock) signBlock.hidden = true
+
+  if (!soft) {
+    showLpromoMsg('')
+    leavePromoCampaignId = null
+    if (leavePromoPdfObjectUrl) {
+      URL.revokeObjectURL(leavePromoPdfObjectUrl)
+      leavePromoPdfObjectUrl = null
+    }
+    emptyEl.hidden = false
+    emptyEl.textContent = '불러오는 중…'
+    mainEl.hidden = true
+    if (pinSetup) pinSetup.hidden = true
+    if (signBlock) signBlock.hidden = true
+  }
+
   try {
     const data = await apiMobileJson<LeavePromoCurrent>('/api/mobile/leave-promotion/current', {
       method: 'GET',
     })
     if (!data.campaign) {
       emptyEl.textContent = '연차촉진 대상으로 등록된 안내가 없습니다. 관리자에게 문의하세요.'
+      emptyEl.hidden = false
       mainEl.hidden = true
       return
     }
@@ -422,7 +431,11 @@ async function refreshLeavePromoScreen(): Promise<void> {
       msgEl.hidden = !raw
     }
 
-    await apiMobileJson(`/api/mobile/leave-promotion/${c.id}/read`, { method: 'POST' })
+    try {
+      await apiMobileJson(`/api/mobile/leave-promotion/${c.id}/read`, { method: 'POST' })
+    } catch (err) {
+      showLpromoMsg(`열람 처리에 실패했습니다. (${String(err)})`, 'err')
+    }
     await loadLeavePromoPdf()
 
     const signed = Boolean(c.signed_at)
@@ -441,8 +454,15 @@ async function refreshLeavePromoScreen(): Promise<void> {
       if (signForm) signForm.hidden = false
     }
   } catch (e) {
-    emptyEl.textContent = String(e)
-    mainEl.hidden = true
+    const msg = String(e)
+    if (soft) {
+      showLpromoMsg(msg, 'err')
+      emptyEl.hidden = true
+    } else {
+      emptyEl.textContent = msg
+      emptyEl.hidden = false
+      mainEl.hidden = true
+    }
   }
 }
 
@@ -855,7 +875,7 @@ export function wireAttendApp() {
         showLpromoMsg('PIN이 저장되었습니다.', 'ok')
         if (a) a.value = ''
         if (b) b.value = ''
-        await refreshLeavePromoScreen()
+        await refreshLeavePromoScreen(true)
       } catch (err) {
         showLpromoMsg(String(err), 'err')
       }
@@ -882,7 +902,7 @@ export function wireAttendApp() {
         })
         showLpromoMsg('전자서명이 완료되었습니다.', 'ok')
         if (pinEl) pinEl.value = ''
-        await refreshLeavePromoScreen()
+        await refreshLeavePromoScreen(true)
       } catch (err) {
         showLpromoMsg(String(err), 'err')
       }
