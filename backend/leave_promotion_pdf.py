@@ -27,10 +27,11 @@ KST = ZoneInfo("Asia/Seoul")
 
 ASSETS_DIR = Path(__file__).resolve().parent / "assets" / "fonts"
 FONT_PATH = ASSETS_DIR / "NotoSansKR-Regular.otf"
-# Noto Sans KR (OTF, CJK). 최초 1회 로컬 캐시.
-FONT_URL = (
+# Noto Sans KR (OTF, CJK). 최초 1회 로컬 캐시. (미러 순서대로 시도)
+FONT_URLS = (
     "https://raw.githubusercontent.com/googlefonts/noto-cjk/main/"
-    "Sans/OTF/Korean/NotoSansKR-Regular.otf"
+    "Sans/OTF/Korean/NotoSansKR-Regular.otf",
+    "https://cdn.jsdelivr.net/gh/googlefonts/noto-cjk@main/Sans/OTF/Korean/NotoSansKR-Regular.otf",
 )
 
 _FONT_REGISTERED = False
@@ -44,24 +45,32 @@ def _ensure_korean_font() -> str:
         return font_name
     ASSETS_DIR.mkdir(parents=True, exist_ok=True)
     if not FONT_PATH.is_file() or FONT_PATH.stat().st_size < 10_000:
-        logger.warning("연차촉진 PDF 폰트 캐시 없음 — 다운로드 시도: %s", FONT_URL)
-        try:
-            req = urllib.request.Request(
-                FONT_URL,
-                headers={"User-Agent": "attend-leave-promotion-pdf/1.0"},
-            )
-            with urllib.request.urlopen(req, timeout=120) as resp:
-                data = resp.read()
-            if len(data) < 10_000:
-                raise RuntimeError("폰트 응답이 너무 짧습니다.")
-            FONT_PATH.write_bytes(data)
-            logger.warning("NotoSansKR-Regular.otf 저장 완료 (%s bytes)", len(data))
-        except Exception as e:
-            logger.error("한글 PDF 폰트를 받지 못했습니다: %s", e)
+        last_err: Exception | None = None
+        data: bytes | None = None
+        for url in FONT_URLS:
+            logger.warning("연차촉진 PDF 폰트 캐시 없음 — 다운로드 시도: %s", url)
+            try:
+                req = urllib.request.Request(
+                    url,
+                    headers={"User-Agent": "attend-leave-promotion-pdf/1.0"},
+                )
+                with urllib.request.urlopen(req, timeout=120) as resp:
+                    data = resp.read()
+                if len(data) < 10_000:
+                    raise RuntimeError("폰트 응답이 너무 짧습니다.")
+                FONT_PATH.write_bytes(data)
+                logger.warning("NotoSansKR-Regular.otf 저장 완료 (%s bytes)", len(data))
+                last_err = None
+                break
+            except Exception as e:
+                last_err = e
+                logger.error("한글 PDF 폰트 URL 실패 (%s): %s", url, e)
+        if last_err is not None or data is None:
+            logger.error("한글 PDF 폰트를 받지 못했습니다: %s", last_err)
             raise RuntimeError(
                 "한글 PDF 폰트를 내려받을 수 없습니다. 네트워크·방화벽을 확인하거나 "
                 f"수동으로 {FONT_PATH} 에 NotoSansKR-Regular.otf 를 넣어 주세요."
-            ) from e
+            ) from last_err
     pdfmetrics.registerFont(TTFont(font_name, str(FONT_PATH)))
     _FONT_REGISTERED = True
     return font_name

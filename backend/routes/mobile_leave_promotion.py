@@ -164,7 +164,17 @@ def mark_read(
     employee_id: int = Depends(get_mobile_employee_id),
     conn: Connection = Depends(get_db),
 ) -> dict:
-    cur = conn.cursor()
+    cur = conn.cursor(DictCursor)
+    cur.execute(
+        """
+        SELECT id FROM leave_promotion_targets
+        WHERE campaign_id = %s AND employee_id = %s
+        LIMIT 1
+        """,
+        (campaign_id, employee_id),
+    )
+    if not cur.fetchone():
+        raise HTTPException(status_code=404, detail="대상 캠페인이 없습니다.")
     cur.execute(
         """
         UPDATE leave_promotion_targets
@@ -173,8 +183,7 @@ def mark_read(
         """,
         (campaign_id, employee_id),
     )
-    if cur.rowcount == 0:
-        raise HTTPException(status_code=404, detail="대상 캠페인이 없습니다.")
+    # MySQL 은 값이 동일하면 영향 행 수를 0으로 줄 수 있어 rowcount 로 404 를 내지 않는다.
     conn.commit()
     return {"ok": True}
 

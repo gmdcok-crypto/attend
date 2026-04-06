@@ -37,6 +37,13 @@ export function attendAppMarkup(): string {
             <div class="state" id="home-status-state">미출근</div>
             <div class="detail" id="home-status-detail">아직 오늘 출근 기록이 없습니다</div>
           </div>
+          <div class="home-lpromo-banner" id="home-lpromo-banner" role="region" aria-label="연차촉진 안내" hidden>
+            <p class="home-lpromo-banner-title" id="home-lpromo-banner-title">연차촉진 전자서명</p>
+            <p class="home-lpromo-banner-desc">안내를 확인하고 전자서명을 완료해 주세요.</p>
+            <button type="button" class="btn-primary home-lpromo-banner-btn" id="home-lpromo-banner-go">
+              지금 서명하기
+            </button>
+          </div>
         </div>
         <div class="attend-home-cta">
           <button type="button" class="btn-primary" id="btn-att-primary">출근하기</button>
@@ -44,7 +51,9 @@ export function attendAppMarkup(): string {
         <div class="attend-home-spacer" aria-hidden="true"></div>
         <nav class="attend-home-bottom-nav" aria-label="바로가기">
           <button type="button" class="home-bottom-link" data-go-screen="history">기록</button>
-          <button type="button" class="home-bottom-link" data-go-screen="more">연차계획</button>
+          <button type="button" class="home-bottom-link home-bottom-link--badge-host" data-go-screen="more">
+            연차계획<span class="nav-badge" id="home-nav-badge-more" hidden aria-hidden="true"></span>
+          </button>
         </nav>
       </div>
     </section>
@@ -129,7 +138,10 @@ export function attendAppMarkup(): string {
       </div>
       <nav class="menu-list">
         <button type="button" class="menu-item menu-item--btn" data-go-screen="leave-promo">
-          연차촉진 전자서명 <span class="chev">›</span>
+          <span class="menu-item-label"
+            >연차촉진 전자서명<span class="nav-badge" id="menu-badge-lpromo" hidden aria-hidden="true"></span></span
+          >
+          <span class="chev">›</span>
         </button>
         <button type="button" class="menu-item menu-item--btn" data-go-screen="leave-plan">
           연차사용 계획 <span class="chev">›</span>
@@ -239,7 +251,9 @@ export function attendAppMarkup(): string {
   <nav id="main-tab-bar" class="tab-bar" aria-label="하단 메뉴" hidden>
     <button type="button" class="tab is-active" data-tab="home" aria-current="page">홈</button>
     <button type="button" class="tab" data-tab="history">기록</button>
-    <button type="button" class="tab" data-tab="more">연차계획</button>
+    <button type="button" class="tab" data-tab="more">
+      연차계획<span class="nav-badge" id="tab-badge-more" hidden aria-hidden="true"></span>
+    </button>
   </nav>
 `
 }
@@ -308,6 +322,44 @@ type LeavePromoCurrent = {
 
 let leavePromoCampaignId: number | null = null
 let leavePromoPdfObjectUrl: string | null = null
+
+/** 미완료 연차촉진 전자서명 — 홈 배너·탭 배지 */
+function applyLeavePromoReminderUi(show: boolean, bannerTitle?: string): void {
+  const banner = document.getElementById('home-lpromo-banner')
+  const titleEl = document.getElementById('home-lpromo-banner-title')
+  const tabBadge = document.getElementById('tab-badge-more')
+  const homeNavBadge = document.getElementById('home-nav-badge-more')
+  const menuBadge = document.getElementById('menu-badge-lpromo')
+  const tabMore = document.querySelector('.tab[data-tab="more"]') as HTMLButtonElement | null
+  if (titleEl) {
+    titleEl.textContent =
+      show && bannerTitle?.trim() ? bannerTitle.trim().slice(0, 80) : '연차촉진 전자서명'
+  }
+  if (banner) banner.hidden = !show
+  for (const el of [tabBadge, homeNavBadge, menuBadge]) {
+    if (el) el.hidden = !show
+  }
+  if (tabMore) {
+    tabMore.setAttribute('aria-label', show ? '연차계획 · 전자서명 대기' : '연차계획')
+  }
+}
+
+export async function refreshLeavePromoReminders(): Promise<void> {
+  if (!readSession()?.access_token) {
+    applyLeavePromoReminderUi(false)
+    return
+  }
+  try {
+    const data = await apiMobileJson<LeavePromoCurrent>('/api/mobile/leave-promotion/current', {
+      method: 'GET',
+    })
+    const c = data.campaign
+    const needs = Boolean(c && !c.signed_at)
+    applyLeavePromoReminderUi(needs, needs ? c?.title : undefined)
+  } catch {
+    applyLeavePromoReminderUi(false)
+  }
+}
 
 function escHtml(s: string): string {
   return s
@@ -391,78 +443,82 @@ async function refreshLeavePromoScreen(soft = false): Promise<void> {
   const signForm = document.getElementById('lpromo-sign-form')
   if (!emptyEl || !mainEl) return
 
-  if (!soft) {
-    showLpromoMsg('')
-    leavePromoCampaignId = null
-    if (leavePromoPdfObjectUrl) {
-      URL.revokeObjectURL(leavePromoPdfObjectUrl)
-      leavePromoPdfObjectUrl = null
-    }
-    emptyEl.hidden = false
-    emptyEl.textContent = '불러오는 중…'
-    mainEl.hidden = true
-    if (pinSetup) pinSetup.hidden = true
-    if (signBlock) signBlock.hidden = true
-  }
-
   try {
-    const data = await apiMobileJson<LeavePromoCurrent>('/api/mobile/leave-promotion/current', {
-      method: 'GET',
-    })
-    if (!data.campaign) {
-      emptyEl.textContent = '연차촉진 대상으로 등록된 안내가 없습니다. 관리자에게 문의하세요.'
+    if (!soft) {
+      showLpromoMsg('')
+      leavePromoCampaignId = null
+      if (leavePromoPdfObjectUrl) {
+        URL.revokeObjectURL(leavePromoPdfObjectUrl)
+        leavePromoPdfObjectUrl = null
+      }
       emptyEl.hidden = false
+      emptyEl.textContent = '불러오는 중…'
       mainEl.hidden = true
-      return
-    }
-    const c = data.campaign
-    leavePromoCampaignId = c.id
-    emptyEl.hidden = true
-    mainEl.hidden = false
-    const titleEl = document.getElementById('lpromo-title')
-    const verEl = document.getElementById('lpromo-version')
-    const msgEl = document.getElementById('lpromo-message')
-    if (titleEl) titleEl.textContent = c.title
-    if (verEl)
-      verEl.textContent = `문서 버전 ${c.doc_version} · 캠페인 해시 ${c.doc_hash.slice(0, 12)}… · 서명 시 본인 PDF 기준`
-    if (msgEl) {
-      const raw = (c.message ?? '').trim()
-      msgEl.textContent = raw
-      msgEl.hidden = !raw
+      if (pinSetup) pinSetup.hidden = true
+      if (signBlock) signBlock.hidden = true
     }
 
     try {
-      await apiMobileJson(`/api/mobile/leave-promotion/${c.id}/read`, { method: 'POST' })
-    } catch (err) {
-      showLpromoMsg(`열람 처리에 실패했습니다. (${String(err)})`, 'err')
-    }
-    await loadLeavePromoPdf()
-
-    const signed = Boolean(c.signed_at)
-    if (signedNote) signedNote.hidden = !signed
-    if (signForm) signForm.hidden = signed
-    if (signBlock) signBlock.hidden = false
-
-    if (signed) {
-      if (pinSetup) pinSetup.hidden = true
-    } else if (!data.has_pin) {
-      if (pinSetup) pinSetup.hidden = false
-      if (signBlock) signBlock.hidden = true
-    } else {
-      if (pinSetup) pinSetup.hidden = true
-      if (signBlock) signBlock.hidden = false
-      if (signForm) signForm.hidden = false
-    }
-  } catch (e) {
-    const msg = String(e)
-    if (soft) {
-      showLpromoMsg(msg, 'err')
+      const data = await apiMobileJson<LeavePromoCurrent>('/api/mobile/leave-promotion/current', {
+        method: 'GET',
+      })
+      if (!data.campaign) {
+        emptyEl.textContent = '연차촉진 대상으로 등록된 안내가 없습니다. 관리자에게 문의하세요.'
+        emptyEl.hidden = false
+        mainEl.hidden = true
+        return
+      }
+      const c = data.campaign
+      leavePromoCampaignId = c.id
       emptyEl.hidden = true
-    } else {
-      emptyEl.textContent = msg
-      emptyEl.hidden = false
-      mainEl.hidden = true
+      mainEl.hidden = false
+      const titleEl = document.getElementById('lpromo-title')
+      const verEl = document.getElementById('lpromo-version')
+      const msgEl = document.getElementById('lpromo-message')
+      if (titleEl) titleEl.textContent = c.title
+      if (verEl)
+        verEl.textContent = `문서 버전 ${c.doc_version} · 캠페인 해시 ${c.doc_hash.slice(0, 12)}… · 서명 시 본인 PDF 기준`
+      if (msgEl) {
+        const raw = (c.message ?? '').trim()
+        msgEl.textContent = raw
+        msgEl.hidden = !raw
+      }
+
+      try {
+        await apiMobileJson(`/api/mobile/leave-promotion/${c.id}/read`, { method: 'POST' })
+      } catch (err) {
+        showLpromoMsg(`열람 처리에 실패했습니다. (${String(err)})`, 'err')
+      }
+      await loadLeavePromoPdf()
+
+      const signed = Boolean(c.signed_at)
+      if (signedNote) signedNote.hidden = !signed
+      if (signForm) signForm.hidden = signed
+      if (signBlock) signBlock.hidden = false
+
+      if (signed) {
+        if (pinSetup) pinSetup.hidden = true
+      } else if (!data.has_pin) {
+        if (pinSetup) pinSetup.hidden = false
+        if (signBlock) signBlock.hidden = true
+      } else {
+        if (pinSetup) pinSetup.hidden = true
+        if (signBlock) signBlock.hidden = false
+        if (signForm) signForm.hidden = false
+      }
+    } catch (e) {
+      const msg = String(e)
+      if (soft) {
+        showLpromoMsg(msg, 'err')
+        emptyEl.hidden = true
+      } else {
+        emptyEl.textContent = msg
+        emptyEl.hidden = false
+        mainEl.hidden = true
+      }
     }
+  } finally {
+    void refreshLeavePromoReminders()
   }
 }
 
@@ -676,6 +732,10 @@ function setScreen(name: string) {
 
   if (name === 'scan') {
     queueMicrotask(() => void beginScanFlow())
+  }
+
+  if (name === 'home') {
+    void refreshLeavePromoReminders()
   }
 }
 
@@ -950,10 +1010,14 @@ export function wireAttendApp() {
     })()
   })
 
+  document.getElementById('home-lpromo-banner-go')?.addEventListener('click', () => {
+    setScreen('leave-promo')
+  })
+
   void refreshTodayState().then(() => {
     updateHomeStatus()
-    setScreen('home')
     tickHomeClock()
+    setScreen('home')
   })
 }
 
