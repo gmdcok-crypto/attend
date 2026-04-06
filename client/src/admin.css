@@ -584,9 +584,11 @@ body {
   margin-bottom: 18px;
 }
 
-.leave-promo-query-layout {
-  grid-template-columns: minmax(0, 1fr);
+/* 연차촉진: 좌측 대상자 표 + 우측 조회 조건 (통계 바로 아래 한 줄) */
+.leave-promo-top-layout {
+  grid-template-columns: minmax(0, 68%) minmax(300px, 1fr);
   margin-bottom: 18px;
+  align-items: start;
 }
 
 .leave-promo-query-form {
@@ -603,6 +605,11 @@ body {
 
 .leave-promo-layout {
   grid-template-columns: minmax(0, 68%) minmax(300px, 1fr);
+}
+
+.leave-promo-layout--config-only {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 720px;
 }
 
 #table-leave-promotion-targets th,
@@ -724,7 +731,7 @@ body {
     grid-template-columns: 1fr;
   }
 
-  .leave-promo-query-layout {
+  .leave-promo-top-layout {
     grid-template-columns: 1fr;
   }
 

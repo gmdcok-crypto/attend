@@ -620,7 +620,22 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
               <div class="stat-foot">2차 안내 발송 완료 인원</div>
             </div>
           </div>
-          <div class="crud-layout leave-promo-query-layout">
+          <div class="crud-layout leave-promo-top-layout">
+            <div class="crud-table-col">
+              <div class="panel">
+                <div class="panel-hd"><h3>연차촉진 대상자</h3></div>
+                <div class="panel-bd table-wrap table-wrap--leave-promo-targets">
+                  <table class="data-table" id="table-leave-promotion-targets">
+                    <thead>
+                      <tr><th>사번</th><th>성명</th><th>부서</th><th>잔여</th><th>1차</th><th>2차</th><th>서명</th></tr>
+                    </thead>
+                    <tbody id="tbody-leave-promotion-targets">
+                      <tr><td colspan="7" class="admin-empty-msg">조회 버튼을 눌러 대상자를 불러오세요.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
             <div class="crud-form-col crud-form-col--inline">
               <div class="form-panel panel form-panel--inline leave-promo-query-form">
                 <div class="panel-hd"><h3>조회 조건</h3></div>
@@ -650,22 +665,7 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
               </div>
             </div>
           </div>
-          <div class="crud-layout leave-promo-layout">
-            <div class="crud-table-col">
-              <div class="panel">
-                <div class="panel-hd"><h3>연차촉진 대상자</h3></div>
-                <div class="panel-bd table-wrap table-wrap--leave-promo-targets">
-                  <table class="data-table" id="table-leave-promotion-targets">
-                    <thead>
-                      <tr><th>사번</th><th>성명</th><th>부서</th><th>잔여</th><th>1차</th><th>2차</th><th>서명</th></tr>
-                    </thead>
-                    <tbody id="tbody-leave-promotion-targets">
-                      <tr><td colspan="7" class="admin-empty-msg">조회 버튼을 눌러 대상자를 불러오세요.</td></tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
+          <div class="crud-layout leave-promo-layout leave-promo-layout--config-only">
             <div class="crud-form-col crud-form-col--inline">
               <div class="form-panel panel form-panel--inline leave-promo-config-form">
                 <div class="panel-hd"><h3>촉진 안내 설정</h3></div>
