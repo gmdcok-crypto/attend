@@ -653,7 +653,7 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
                   </div>
                   <div class="form-field form-field--row">
                     <label for="lp-year">기준연도</label>
-                    <input type="number" id="lp-year" min="2000" max="2100" value="2026" />
+                    <input type="number" id="lp-year" min="2000" max="2100" placeholder="기준연도" />
                   </div>
                   <div class="form-field form-field--row">
                     <label for="lp-dept">부서</label>
@@ -1355,9 +1355,19 @@ async function loadLeavePromotionDeptOptions() {
 }
 
 async function runLeavePromotionSearch(showAlertWhenNoCampaign = false) {
-  const id = latestLeavePromotionCampaignId
   const tb = document.getElementById('tbody-leave-promotion-targets')
   if (!tb) return
+
+  const campSel = document.getElementById('lp-campaign-select') as HTMLSelectElement | null
+  const rawCamp = campSel?.value?.trim() ?? ''
+  let id: number | null = null
+  if (rawCamp) {
+    const p = parseInt(rawCamp, 10)
+    if (Number.isFinite(p) && p > 0) id = p
+  }
+  if (id == null) id = latestLeavePromotionCampaignId
+  if (id != null) latestLeavePromotionCampaignId = id
+
   if (!id) {
     tb.innerHTML =
       '<tr><td colspan="7" class="admin-empty-msg">캠페인을 등록한 뒤 조회하세요.</td></tr>'
@@ -1384,8 +1394,24 @@ async function runLeavePromotionSearch(showAlertWhenNoCampaign = false) {
     filtered = rows.filter((r) => (r.department_name || '') === deptFilter)
   }
   if (!filtered.length) {
-    tb.innerHTML =
-      '<tr><td colspan="7" class="admin-empty-msg">조건에 맞는 대상이 없습니다.</td></tr>'
+    if (rows.length && deptFilter) {
+      tb.innerHTML =
+        '<tr><td colspan="7" class="admin-empty-msg">선택한 부서에 해당하는 대상이 없습니다. 부서를 「전체」로 바꿔 조회해 보세요.</td></tr>'
+    } else if (!rows.length) {
+      if (status === 'signed') {
+        tb.innerHTML =
+          '<tr><td colspan="7" class="admin-empty-msg">서명완료된 대상이 없습니다. 서명상태를 「전체」로 하거나 다른 캠페인을 선택해 보세요.</td></tr>'
+      } else if (status === 'pending') {
+        tb.innerHTML =
+          '<tr><td colspan="7" class="admin-empty-msg">미서명 대상이 없습니다. (이미 모두 서명했을 수 있습니다.)</td></tr>'
+      } else {
+        tb.innerHTML =
+          '<tr><td colspan="7" class="admin-empty-msg">이 캠페인에 등록된 대상자가 없습니다. 「등록 사원 대상 추가」를 눌렀는지 확인하세요. 모바일 서명은 <strong>최신 캠페인</strong> 기준이므로, 여기서 선택한 캠페인과 같아야 합니다.</td></tr>'
+      }
+    } else {
+      tb.innerHTML =
+        '<tr><td colspan="7" class="admin-empty-msg">조건에 맞는 대상이 없습니다.</td></tr>'
+    }
     return
   }
   tb.innerHTML = filtered
@@ -1419,6 +1445,10 @@ function applyLeavePromotionStats(c: LpCampaignRow | null | undefined): void {
  */
 async function refreshLeavePromotionView(preferredCampaignId?: number | null) {
   await loadLeavePromotionDeptOptions()
+  const yEl = document.getElementById('lp-year') as HTMLInputElement | null
+  if (yEl && !yEl.value?.trim()) {
+    yEl.value = String(new Date().getFullYear())
+  }
   const campaigns = await apiJson<LpCampaignRow[]>('/api/leave-promotion/campaigns')
   const ids = campaigns.map((x) => x.id)
   const sel = document.getElementById('lp-campaign-select') as HTMLSelectElement | null

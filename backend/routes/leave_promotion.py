@@ -142,7 +142,10 @@ def list_targets(
     out: list[dict] = []
     for r in rows:
         emp_id = int(r["employee_id"])
-        remaining = _remaining_total_for_year(conn, emp_id, y)
+        try:
+            remaining = _remaining_total_for_year(conn, emp_id, y)
+        except Exception:
+            remaining = None
 
         ra = r.get("read_at")
         sa = r.get("signed_at")
