@@ -105,19 +105,22 @@ _PAD_PT = 4 * 72 / 25.4
 _KO_FONT = "AttendNanumGothic"
 # yuncha.pdf 본문 span size ≈ 11.04 — 아래 설명 단락과 동일
 _BODY_FONTSIZE = 11.04
-# insert_textbox 줄간격 배수 — 템플릿 첫 단락 두 줄 베이스라인 간격(~11pt×1.95)에 맞춤
-_BODY_LINEHEIGHT_FACTOR = 1.95
-# 양식 표는 얇은 실선 느낌 — 재그린 이름·입사일 칸만 너무 굵지 않게
+# insert_textbox 줄간격 배수 — 아래 본문 줄간과 비슷하게 (첫·둘째 줄 사이 여유)
+_BODY_LINEHEIGHT_FACTOR = 2.15
+# 양식 표는 얇은 실선 — 재그린 이름·입사일 칸은 윗변 제외(원본 가로선과 이중선 방지)
 _TABLE_BORDER_WIDTH = 0.35
 
 
-def _stroke_cell_rect(page, rect, width: float = _TABLE_BORDER_WIDTH) -> None:
-    """값 칸 redact 로 지워진 테두리를 사각형으로 다시 그린다 (상·하·좌·우)."""
+def _stroke_cell_lrb(page, rect, width: float = _TABLE_BORDER_WIDTH) -> None:
+    """값 칸 redact 로 지워진 테두리: 왼쪽·오른쪽·아래만 (윗변은 양식에 이미 있음)."""
     import fitz
 
+    r = rect
     shape = page.new_shape()
-    shape.draw_rect(rect)
-    shape.finish(color=(0, 0, 0), width=width, fill=None)
+    shape.draw_line(fitz.Point(r.x0, r.y0), fitz.Point(r.x0, r.y1))
+    shape.draw_line(fitz.Point(r.x1, r.y0), fitz.Point(r.x1, r.y1))
+    shape.draw_line(fitz.Point(r.x0, r.y1), fitz.Point(r.x1, r.y1))
+    shape.finish(color=(0, 0, 0), width=width)
     shape.commit()
 
 
@@ -151,8 +154,8 @@ def _fill_yuncha_pdf_bytes(emp: dict, annual: dict, year: int) -> bytes:
         f"{rem}일의 연차 휴가를 추가로 사용할 수 있습니다."
     )
 
-    # 템플릿 첫 단락·이름/입사일 칸(점선·플레이스홀더) 덮기 (줄바꿈 3줄까지 여유)
-    para_rect = fitz.Rect(72, 326, 528, 412)
+    # 템플릿 첫 단락·이름/입사일 칸(점선·플레이스홀더) 덮기 (줄간 넓힘·3줄까지 여유)
+    para_rect = fitz.Rect(72, 324, 528, 418)
     name_val_rect = fitz.Rect(200.4, 151.6, 297.5, 177.8)
     hire_box_rect = fitz.Rect(407.3, 151.6, 506.8, 177.8)
     page.add_redact_annot(para_rect, fill=(1, 1, 1))
@@ -190,8 +193,8 @@ def _fill_yuncha_pdf_bytes(emp: dict, annual: dict, year: int) -> bytes:
     page.insert_text((x_left, 280), used, fontname=_KO_FONT, fontsize=10, color=(0, 0, 0))
     page.insert_text((x_rem, 280), rem, fontname=_KO_FONT, fontsize=10, color=(0, 0, 0))
 
-    _stroke_cell_rect(page, name_val_rect)
-    _stroke_cell_rect(page, hire_box_rect)
+    _stroke_cell_lrb(page, name_val_rect)
+    _stroke_cell_lrb(page, hire_box_rect)
 
     buf = io.BytesIO()
     doc.save(buf)
