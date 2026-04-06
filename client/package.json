@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "html5-qrcode": "^2.3.8",
+    "pdfjs-dist": "^4.10.38",
     "qrcode": "^1.5.4"
   }
 }

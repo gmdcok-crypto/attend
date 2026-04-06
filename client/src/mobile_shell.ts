@@ -210,16 +210,11 @@ export function attendAppMarkup(): string {
             <h2 class="lpromo-doc-title" id="lpromo-title"></h2>
             <p class="lpromo-meta" id="lpromo-version"></p>
             <pre class="lpromo-body" id="lpromo-message" hidden></pre>
-            <p class="lpromo-pdf-hint">아래는 본인 정보가 반영된 PDF 안내입니다. 화면에 안 보이면 「PDF 열기」를 눌러 주세요.</p>
+            <p class="lpromo-pdf-hint">아래는 본인 정보가 반영된 안내 미리보기입니다. 전체 문서는 「PDF 열기」로 확인할 수 있습니다.</p>
             <p class="leave-promo-pdf-status" id="lpromo-pdf-status" role="status" hidden></p>
             <div class="lpromo-pdf-wrap">
-              <embed
-                class="lpromo-pdf-frame"
-                id="lpromo-pdf-embed"
-                type="application/pdf"
-                title="연차촉진 안내 PDF"
-                hidden
-              />
+              <p class="lpromo-pdf-loading" id="lpromo-pdf-loading" hidden>미리보기 준비 중…</p>
+              <div id="lpromo-pdf-canvas-host" class="lpromo-pdf-canvas-host" hidden></div>
             </div>
             <button type="button" class="btn-text lpromo-pdf-open" id="lpromo-pdf-open" hidden>
               PDF 열기 (새 창)
@@ -399,16 +394,18 @@ function showLpromoMsg(text: string, kind: 'ok' | 'err' | '' = ''): void {
 }
 
 async function loadLeavePromoPdf(): Promise<void> {
-  const embedEl = document.getElementById('lpromo-pdf-embed') as HTMLEmbedElement | null
+  const host = document.getElementById('lpromo-pdf-canvas-host')
+  const loadingEl = document.getElementById('lpromo-pdf-loading')
   const statusEl = document.getElementById('lpromo-pdf-status')
   const openBtn = document.getElementById('lpromo-pdf-open')
   if (leavePromoPdfObjectUrl) {
     URL.revokeObjectURL(leavePromoPdfObjectUrl)
     leavePromoPdfObjectUrl = null
   }
-  if (!embedEl) return
-  embedEl.removeAttribute('src')
-  embedEl.hidden = true
+  if (!host) return
+  host.innerHTML = ''
+  host.hidden = true
+  if (loadingEl) loadingEl.hidden = true
   if (openBtn) {
     openBtn.hidden = true
     openBtn.onclick = null
@@ -422,8 +419,21 @@ async function loadLeavePromoPdf(): Promise<void> {
     const buf = await blob.arrayBuffer()
     const pdfBlob = new Blob([buf], { type: 'application/pdf' })
     leavePromoPdfObjectUrl = URL.createObjectURL(pdfBlob)
-    embedEl.src = leavePromoPdfObjectUrl
-    embedEl.hidden = false
+
+    if (loadingEl) loadingEl.hidden = false
+    try {
+      const { renderPdfPreview } = await import('./mobile_pdf_preview')
+      host.hidden = false
+      await renderPdfPreview(host, buf)
+    } catch (rendErr) {
+      host.innerHTML =
+        '<p class="lpromo-pdf-fallback-hint">이 기기에서는 미리보기를 표시하지 못했습니다. 아래 「PDF 열기」로 전체 문서를 확인해 주세요.</p>'
+      host.hidden = false
+      console.warn('[leave-promo] pdf preview', rendErr)
+    } finally {
+      if (loadingEl) loadingEl.hidden = true
+    }
+
     if (openBtn) {
       openBtn.hidden = false
       openBtn.onclick = () => {
@@ -439,6 +449,7 @@ async function loadLeavePromoPdf(): Promise<void> {
       }
     }
   } catch (e) {
+    if (loadingEl) loadingEl.hidden = true
     if (statusEl) {
       statusEl.hidden = false
       statusEl.textContent = `PDF를 불러오지 못했습니다. (${String(e)})`

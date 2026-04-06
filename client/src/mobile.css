@@ -784,19 +784,48 @@ body {
 
 .lpromo-pdf-wrap {
   width: 100%;
-  min-height: 220px;
+  min-height: 120px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  overflow: hidden;
-  background: #f3f4f6;
+  overflow: auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  background: #f8fafc;
 }
 
-.lpromo-pdf-frame {
+.lpromo-pdf-loading {
+  margin: 0;
+  padding: 20px 12px;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.lpromo-pdf-canvas-host {
+  padding: 8px 0;
+  text-align: center;
+}
+
+.lpromo-pdf-page-canvas {
   display: block;
-  width: 100%;
-  min-height: 50vh;
-  max-height: 70vh;
-  border: 0;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.lpromo-pdf-page-gap {
+  height: 10px;
+}
+
+.lpromo-pdf-fallback-hint {
+  margin: 0;
+  padding: 16px 12px;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  text-align: center;
 }
 
 .lpromo-pdf-open {
