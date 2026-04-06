@@ -26,21 +26,19 @@ logger = logging.getLogger("attend-api")
 KST = ZoneInfo("Asia/Seoul")
 
 ASSETS_DIR = Path(__file__).resolve().parent / "assets" / "fonts"
-FONT_PATH = ASSETS_DIR / "NotoSansKR-Regular.otf"
-# Noto Sans KR (OTF, CJK). 최초 1회 로컬 캐시. (미러 순서대로 시도)
+# TrueType — ReportLab TTFont는 CFF(일부 OTF) 미지원. Nanum Gothic OFL, google/fonts.
+FONT_PATH = ASSETS_DIR / "NanumGothic-Regular.ttf"
 FONT_URLS = (
-    "https://raw.githubusercontent.com/googlefonts/noto-cjk/main/"
-    "Sans/OTF/Korean/NotoSansKR-Regular.otf",
-    "https://cdn.jsdelivr.net/gh/googlefonts/noto-cjk@main/Sans/OTF/Korean/NotoSansKR-Regular.otf",
+    "https://raw.githubusercontent.com/google/fonts/main/ofl/nanumgothic/NanumGothic-Regular.ttf",
 )
 
 _FONT_REGISTERED = False
 
 
 def _ensure_korean_font() -> str:
-    """한글 TTF/OTF 등록. 없으면 다운로드 후 캐시."""
+    """한글 TTF 등록. 저장소에 파일이 있으면 오프라인 동작, 없으면 URL에서 캐시."""
     global _FONT_REGISTERED
-    font_name = "NotoSansKR"
+    font_name = "NanumGothic"
     if _FONT_REGISTERED:
         return font_name
     ASSETS_DIR.mkdir(parents=True, exist_ok=True)
@@ -59,7 +57,7 @@ def _ensure_korean_font() -> str:
                 if len(data) < 10_000:
                     raise RuntimeError("폰트 응답이 너무 짧습니다.")
                 FONT_PATH.write_bytes(data)
-                logger.warning("NotoSansKR-Regular.otf 저장 완료 (%s bytes)", len(data))
+                logger.warning("NanumGothic-Regular.ttf 저장 완료 (%s bytes)", len(data))
                 last_err = None
                 break
             except Exception as e:
@@ -69,7 +67,7 @@ def _ensure_korean_font() -> str:
             logger.error("한글 PDF 폰트를 받지 못했습니다: %s", last_err)
             raise RuntimeError(
                 "한글 PDF 폰트를 내려받을 수 없습니다. 네트워크·방화벽을 확인하거나 "
-                f"수동으로 {FONT_PATH} 에 NotoSansKR-Regular.otf 를 넣어 주세요."
+                f"수동으로 {FONT_PATH} 에 NanumGothic-Regular.ttf 를 넣어 주세요."
             ) from last_err
     pdfmetrics.registerFont(TTFont(font_name, str(FONT_PATH)))
     _FONT_REGISTERED = True
@@ -90,8 +88,7 @@ def build_personalized_pdf_bytes(
     """캠페인·사원·휴가 요약을 넣은 1인용 PDF 바이트."""
     from backend.routes.employee_leaves import _leave_summary_payload
 
-    _ensure_korean_font()
-    font = "NotoSansKR"
+    font = _ensure_korean_font()
 
     cur = conn.cursor(DictCursor)
     cur.execute(
