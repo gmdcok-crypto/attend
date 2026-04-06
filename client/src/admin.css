@@ -584,22 +584,8 @@ body {
   margin-bottom: 18px;
 }
 
-.leave-promo-filter-panel {
-  margin-bottom: 18px;
-}
-
-.leave-promo-filter-panel .empty-hint {
-  padding: 16px 22px 12px;
-  text-align: left;
-}
-
-.leave-promo-filter-actions {
-  padding: 0 22px 22px;
-  margin: 0;
-}
-
 .leave-promo-query-layout {
-  grid-template-columns: minmax(0, 68%) minmax(300px, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   margin-bottom: 18px;
 }
 

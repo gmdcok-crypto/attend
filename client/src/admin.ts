@@ -621,19 +621,6 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
             </div>
           </div>
           <div class="crud-layout leave-promo-query-layout">
-            <div class="crud-table-col">
-              <div class="panel leave-promo-filter-panel">
-                <div class="panel-hd"><h3>대상 조회</h3></div>
-                <p class="empty-hint">
-                  오른쪽에서 조건을 고른 뒤 <strong>조회</strong>를 누르거나, 아래 버튼으로 목록을 불러옵니다.
-                </p>
-                <div class="form-actions leave-promo-filter-actions">
-                  <button type="button" class="btn btn-primary" id="lp-btn-search-primary">
-                    조회
-                  </button>
-                </div>
-              </div>
-            </div>
             <div class="crud-form-col crud-form-col--inline">
               <div class="form-panel panel form-panel--inline leave-promo-query-form">
                 <div class="panel-hd"><h3>조회 조건</h3></div>
@@ -1433,7 +1420,6 @@ function wireLeavePromotion() {
     void runLeavePromotionSearch(true).catch((e) => adminAlert(String(e)))
   }
   bindButtonById('lp-btn-search', '연차촉진', runSearch)
-  bindButtonById('lp-btn-search-primary', '연차촉진', runSearch)
   bindButtonById('lp-btn-campaign-save', '연차촉진', () => {
     const title =
       (document.getElementById('lp-campaign-title') as HTMLInputElement | null)?.value?.trim() ?? ''
