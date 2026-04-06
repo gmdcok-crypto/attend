@@ -103,6 +103,21 @@ def _fmt_days(v: object) -> str:
 _PAD_PT = 3 * 72 / 25.4
 # insert_font 등록명 — insert_text / insert_textbox 에 fontname 으로 사용 (한글 깨짐 방지)
 _KO_FONT = "AttendNanumGothic"
+# yuncha.pdf 본문(아래 설명 단락)과 동일한 크기 (템플릿 span size ≈ 11.04)
+_BODY_FONTSIZE = 11.0
+
+
+def _stroke_cell_lrb(page, rect, width: float = 0.48) -> None:
+    """값 칸 전체 redact 시 사라지는 왼쪽·오른쪽·아래 테두리만 다시 그린다."""
+    import fitz
+
+    r = rect
+    shape = page.new_shape()
+    shape.draw_line(fitz.Point(r.x0, r.y0), fitz.Point(r.x0, r.y1))
+    shape.draw_line(fitz.Point(r.x1, r.y0), fitz.Point(r.x1, r.y1))
+    shape.draw_line(fitz.Point(r.x0, r.y1), fitz.Point(r.x1, r.y1))
+    shape.finish(color=(0, 0, 0), width=width)
+    shape.commit()
 
 
 def _resolve_yuncha_template() -> Path:
@@ -149,7 +164,7 @@ def _fill_yuncha_pdf_bytes(emp: dict, annual: dict, year: int) -> bytes:
         para_rect,
         p1,
         fontname=_KO_FONT,
-        fontsize=10,
+        fontsize=_BODY_FONTSIZE,
         color=(0, 0, 0),
         align=fitz.TEXT_ALIGN_LEFT,
     )
@@ -172,6 +187,9 @@ def _fill_yuncha_pdf_bytes(emp: dict, annual: dict, year: int) -> bytes:
     page.insert_text((x_left, 252), period_s, fontname=_KO_FONT, fontsize=10, color=(0, 0, 0))
     page.insert_text((x_left, 280), used, fontname=_KO_FONT, fontsize=10, color=(0, 0, 0))
     page.insert_text((x_rem, 280), rem, fontname=_KO_FONT, fontsize=10, color=(0, 0, 0))
+
+    _stroke_cell_lrb(page, name_val_rect)
+    _stroke_cell_lrb(page, hire_box_rect)
 
     buf = io.BytesIO()
     doc.save(buf)
