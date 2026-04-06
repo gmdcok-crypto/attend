@@ -213,7 +213,13 @@ export function attendAppMarkup(): string {
             <p class="lpromo-pdf-hint">아래는 본인 정보가 반영된 PDF 안내입니다. 화면에 안 보이면 「PDF 열기」를 눌러 주세요.</p>
             <p class="leave-promo-pdf-status" id="lpromo-pdf-status" role="status" hidden></p>
             <div class="lpromo-pdf-wrap">
-              <iframe class="lpromo-pdf-frame" id="lpromo-pdf-frame" title="연차촉진 안내 PDF" hidden></iframe>
+              <embed
+                class="lpromo-pdf-frame"
+                id="lpromo-pdf-embed"
+                type="application/pdf"
+                title="연차촉진 안내 PDF"
+                hidden
+              />
             </div>
             <button type="button" class="btn-text lpromo-pdf-open" id="lpromo-pdf-open" hidden>
               PDF 열기 (새 창)
@@ -393,16 +399,16 @@ function showLpromoMsg(text: string, kind: 'ok' | 'err' | '' = ''): void {
 }
 
 async function loadLeavePromoPdf(): Promise<void> {
-  const frame = document.getElementById('lpromo-pdf-frame') as HTMLIFrameElement | null
+  const embedEl = document.getElementById('lpromo-pdf-embed') as HTMLEmbedElement | null
   const statusEl = document.getElementById('lpromo-pdf-status')
   const openBtn = document.getElementById('lpromo-pdf-open')
   if (leavePromoPdfObjectUrl) {
     URL.revokeObjectURL(leavePromoPdfObjectUrl)
     leavePromoPdfObjectUrl = null
   }
-  if (!frame) return
-  frame.removeAttribute('src')
-  frame.hidden = true
+  if (!embedEl) return
+  embedEl.removeAttribute('src')
+  embedEl.hidden = true
   if (openBtn) {
     openBtn.hidden = true
     openBtn.onclick = null
@@ -413,13 +419,23 @@ async function loadLeavePromoPdf(): Promise<void> {
   }
   try {
     const blob = await apiMobileBlob('/api/mobile/leave-promotion/current/pdf', { method: 'GET' })
-    leavePromoPdfObjectUrl = URL.createObjectURL(blob)
-    frame.src = leavePromoPdfObjectUrl
-    frame.hidden = false
+    const buf = await blob.arrayBuffer()
+    const pdfBlob = new Blob([buf], { type: 'application/pdf' })
+    leavePromoPdfObjectUrl = URL.createObjectURL(pdfBlob)
+    embedEl.src = leavePromoPdfObjectUrl
+    embedEl.hidden = false
     if (openBtn) {
       openBtn.hidden = false
       openBtn.onclick = () => {
-        if (leavePromoPdfObjectUrl) window.open(leavePromoPdfObjectUrl, '_blank', 'noopener,noreferrer')
+        if (!leavePromoPdfObjectUrl) return
+        const w = window.open(leavePromoPdfObjectUrl, '_blank', 'noopener,noreferrer')
+        if (!w) {
+          const a = document.createElement('a')
+          a.href = leavePromoPdfObjectUrl
+          a.target = '_blank'
+          a.rel = 'noopener noreferrer'
+          a.click()
+        }
       }
     }
   } catch (e) {
