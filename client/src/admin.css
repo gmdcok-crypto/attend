@@ -601,18 +601,22 @@ body {
 .leave-promo-query-wrap {
   display: flex;
   flex-direction: row;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: flex-start;
   gap: 14px;
   min-width: 0;
 }
 
+/* 패널은 내용 너비 유지(flex 늘리지 않음). 버튼만 패널 오른쪽 위에 배치 */
 .leave-promo-query-wrap .leave-promo-query-form {
-  flex: 1;
-  min-width: 0;
+  flex: 0 1 auto;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .leave-promo-query-action {
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  padding-top: 2px;
 }
 
 .leave-promo-query-form {
