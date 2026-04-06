@@ -637,34 +637,32 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
               </div>
             </div>
             <div class="crud-form-col crud-form-col--inline leave-promo-right-col">
-              <div class="leave-promo-query-wrap">
-                <div class="form-panel panel form-panel--inline leave-promo-query-form">
-                  <div class="panel-hd"><h3>조회 조건</h3></div>
-                  <div class="form-fields form-fields--inline-rows">
-                    <div class="form-field form-field--row">
-                      <label for="lp-year">기준연도</label>
-                      <input type="number" id="lp-year" min="2000" max="2100" value="2026" />
-                    </div>
-                    <div class="form-field form-field--row">
-                      <label for="lp-dept">부서</label>
-                      <select id="lp-dept">
-                        <option value="">전체</option>
-                      </select>
-                    </div>
-                    <div class="form-field form-field--row">
-                      <label for="lp-status">서명상태</label>
-                      <select id="lp-status">
-                        <option value="">전체</option>
-                        <option value="pending">미서명</option>
-                        <option value="signed">서명완료</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-                <div class="leave-promo-query-action">
-                  <button type="button" class="btn btn-primary" id="lp-btn-search">
+              <div class="form-panel panel form-panel--inline leave-promo-query-form">
+                <div class="panel-hd">
+                  <h3>조회 조건</h3>
+                  <button type="button" class="btn btn-primary leave-promo-hd-search" id="lp-btn-search">
                     조회
                   </button>
+                </div>
+                <div class="form-fields form-fields--inline-rows">
+                  <div class="form-field form-field--row">
+                    <label for="lp-year">기준연도</label>
+                    <input type="number" id="lp-year" min="2000" max="2100" value="2026" />
+                  </div>
+                  <div class="form-field form-field--row">
+                    <label for="lp-dept">부서</label>
+                    <select id="lp-dept">
+                      <option value="">전체</option>
+                    </select>
+                  </div>
+                  <div class="form-field form-field--row">
+                    <label for="lp-status">서명상태</label>
+                    <select id="lp-status">
+                      <option value="">전체</option>
+                      <option value="pending">미서명</option>
+                      <option value="signed">서명완료</option>
+                    </select>
+                  </div>
                 </div>
               </div>
               <div class="form-panel panel form-panel--inline leave-promo-config-form">
