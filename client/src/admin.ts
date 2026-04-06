@@ -686,7 +686,7 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
                   </div>
                   <div class="form-field form-field--row leave-promo-config-field--message">
                     <label for="lp-message">안내 문구</label>
-                    <textarea id="lp-message" rows="5">연차 사용 촉진 안내문을 확인하시고 서명해 주세요.</textarea>
+                    <textarea id="lp-message" rows="2">연차 사용 촉진 안내문을 확인하시고 서명해 주세요.</textarea>
                   </div>
                 </div>
                 <div class="form-actions">

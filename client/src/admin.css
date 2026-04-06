@@ -637,6 +637,11 @@ body {
   padding-top: 0.35em;
 }
 
+.form-fields--inline-rows .leave-promo-config-field--message textarea {
+  resize: vertical;
+  line-height: 1.45;
+}
+
 #table-leave-promotion-targets th,
 #table-leave-promotion-targets td {
   white-space: nowrap;
