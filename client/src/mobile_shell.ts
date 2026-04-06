@@ -119,10 +119,10 @@ export function attendAppMarkup(): string {
     <section class="screen" data-screen="more" aria-label="연차계획">
       <header class="screen-header">
         <h1>연차계획</h1>
-        <p class="sub">연차·휴가 현황</p>
+        <p class="sub">연차 휴가 현황</p>
       </header>
-      <div class="leave-summary" id="leave-summary" aria-label="연차·휴가 요약">
-        <div class="leave-summary-hd" id="leave-summary-hd">연차·휴가 요약</div>
+      <div class="leave-summary" id="leave-summary" aria-label="연차 휴가 요약">
+        <div class="leave-summary-hd" id="leave-summary-hd">연차 휴가 요약</div>
         <div class="leave-summary-body" id="leave-summary-body">
           <p class="leave-summary-empty">연차계획 탭을 열면 요약이 표시됩니다.</p>
         </div>
@@ -197,12 +197,15 @@ export function attendAppMarkup(): string {
           <div class="lpromo-doc">
             <h2 class="lpromo-doc-title" id="lpromo-title"></h2>
             <p class="lpromo-meta" id="lpromo-version"></p>
-            <p class="lpromo-pdf-hint">아래 PDF는 본인 정보가 반영된 안내입니다.</p>
+            <pre class="lpromo-body" id="lpromo-message" hidden></pre>
+            <p class="lpromo-pdf-hint">아래는 본인 정보가 반영된 PDF 안내입니다. 화면에 안 보이면 「PDF 열기」를 눌러 주세요.</p>
             <p class="leave-promo-pdf-status" id="lpromo-pdf-status" role="status" hidden></p>
             <div class="lpromo-pdf-wrap">
               <iframe class="lpromo-pdf-frame" id="lpromo-pdf-frame" title="연차촉진 안내 PDF" hidden></iframe>
             </div>
-            <pre class="lpromo-body" id="lpromo-message" hidden></pre>
+            <button type="button" class="btn-text lpromo-pdf-open" id="lpromo-pdf-open" hidden>
+              PDF 열기 (새 창)
+            </button>
           </div>
           <div class="lpromo-pin-setup" id="lpromo-pin-setup" hidden>
             <p class="lpromo-hint">전자서명 전에 6자리 PIN을 설정합니다.</p>
@@ -340,7 +343,7 @@ function showLpromoMsg(text: string, kind: 'ok' | 'err' | '' = ''): void {
 async function loadLeavePromoPdf(): Promise<void> {
   const frame = document.getElementById('lpromo-pdf-frame') as HTMLIFrameElement | null
   const statusEl = document.getElementById('lpromo-pdf-status')
-  const fallbackPre = document.getElementById('lpromo-message')
+  const openBtn = document.getElementById('lpromo-pdf-open')
   if (leavePromoPdfObjectUrl) {
     URL.revokeObjectURL(leavePromoPdfObjectUrl)
     leavePromoPdfObjectUrl = null
@@ -348,6 +351,10 @@ async function loadLeavePromoPdf(): Promise<void> {
   if (!frame) return
   frame.removeAttribute('src')
   frame.hidden = true
+  if (openBtn) {
+    openBtn.hidden = true
+    openBtn.onclick = null
+  }
   if (statusEl) {
     statusEl.hidden = true
     statusEl.textContent = ''
@@ -357,9 +364,13 @@ async function loadLeavePromoPdf(): Promise<void> {
     leavePromoPdfObjectUrl = URL.createObjectURL(blob)
     frame.src = leavePromoPdfObjectUrl
     frame.hidden = false
-    if (fallbackPre) fallbackPre.hidden = true
+    if (openBtn) {
+      openBtn.hidden = false
+      openBtn.onclick = () => {
+        if (leavePromoPdfObjectUrl) window.open(leavePromoPdfObjectUrl, '_blank', 'noopener,noreferrer')
+      }
+    }
   } catch (e) {
-    if (fallbackPre) fallbackPre.hidden = false
     if (statusEl) {
       statusEl.hidden = false
       statusEl.textContent = `PDF를 불러오지 못했습니다. (${String(e)})`
@@ -405,7 +416,11 @@ async function refreshLeavePromoScreen(): Promise<void> {
     if (titleEl) titleEl.textContent = c.title
     if (verEl)
       verEl.textContent = `문서 버전 ${c.doc_version} · 캠페인 해시 ${c.doc_hash.slice(0, 12)}… · 서명 시 본인 PDF 기준`
-    if (msgEl) msgEl.textContent = c.message
+    if (msgEl) {
+      const raw = (c.message ?? '').trim()
+      msgEl.textContent = raw
+      msgEl.hidden = !raw
+    }
 
     await apiMobileJson(`/api/mobile/leave-promotion/${c.id}/read`, { method: 'POST' })
     await loadLeavePromoPdf()
@@ -501,7 +516,7 @@ async function refreshLeaveSummary(): Promise<void> {
   const body = document.getElementById('leave-summary-body')
   if (!body) return
   const y = new Date().getFullYear()
-  if (hd) hd.textContent = `${y}년 연차·휴가`
+  if (hd) hd.textContent = `${y}년 연차 휴가`
   body.innerHTML = '<p class="leave-summary-empty">불러오는 중…</p>'
   try {
     const summary = await apiMobileJson<MyLeaveSummary>(`/api/employee-leaves/me/summary?year=${y}`)
@@ -521,7 +536,7 @@ async function refreshLeaveSummary(): Promise<void> {
     }
   } catch {
     body.innerHTML =
-      '<p class="leave-summary-empty">연차·휴가 정보를 불러오지 못했습니다. 잠시 후 다시 시도하세요.</p>'
+      '<p class="leave-summary-empty">연차 휴가 정보를 불러오지 못했습니다. 잠시 후 다시 시도하세요.</p>'
   }
 }
 

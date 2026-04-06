@@ -178,7 +178,7 @@ def build_personalized_pdf_bytes(
         [
             "기준 연도",
             str(y),
-            "연차·휴가 사용/잔여(요약)",
+            "연차 휴가 사용/잔여(요약)",
             f"사용 {used_s}일 / 잔여 {rem_s}일",
         ],
     ]

@@ -492,7 +492,7 @@ body {
   cursor: pointer;
 }
 
-/* ----- 연차·휴가 요약 (연차계획 탭) ----- */
+/* ----- 연차 휴가 요약 (연차계획 탭) ----- */
 .leave-summary {
   margin: 0 20px 16px;
   padding: 14px 16px;
@@ -742,6 +742,16 @@ body {
   min-height: 50vh;
   max-height: 70vh;
   border: 0;
+}
+
+.lpromo-pdf-open {
+  display: block;
+  width: 100%;
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--primary);
 }
 
 .lpromo-body {
