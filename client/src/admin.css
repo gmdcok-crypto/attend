@@ -598,6 +598,23 @@ body {
   min-width: 0;
 }
 
+.leave-promo-query-wrap {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.leave-promo-query-wrap .leave-promo-query-form {
+  flex: 1;
+  min-width: 0;
+}
+
+.leave-promo-query-action {
+  flex-shrink: 0;
+}
+
 .leave-promo-query-form {
   position: static;
 }
