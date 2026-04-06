@@ -667,8 +667,8 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
               </div>
               <div class="form-panel panel form-panel--inline leave-promo-config-form">
                 <div class="panel-hd"><h3>촉진 안내 설정</h3></div>
-                <div class="form-fields">
-                  <div class="form-field">
+                <div class="form-fields form-fields--inline-rows">
+                  <div class="form-field form-field--row">
                     <label for="lp-campaign-title">안내 제목</label>
                     <input type="text" id="lp-campaign-title" value="[연차촉진] 연차 사용 촉진 안내" />
                   </div>
@@ -684,7 +684,7 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
                     <label for="lp-send-date-2">2차 발송일</label>
                     <input type="date" id="lp-send-date-2" />
                   </div>
-                  <div class="form-field">
+                  <div class="form-field form-field--row leave-promo-config-field--message">
                     <label for="lp-message">안내 문구</label>
                     <textarea id="lp-message" rows="5">연차 사용 촉진 안내문을 확인하시고 서명해 주세요.</textarea>
                   </div>

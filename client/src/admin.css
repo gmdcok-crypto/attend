@@ -619,6 +619,24 @@ body {
   position: static;
 }
 
+.leave-promo-config-form .form-fields--inline-rows .form-field--row label {
+  min-width: 4.8em;
+}
+
+.form-fields--inline-rows .form-field--row textarea {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
+
+.form-fields--inline-rows .leave-promo-config-field--message {
+  align-items: flex-start;
+}
+
+.form-fields--inline-rows .leave-promo-config-field--message label {
+  padding-top: 0.35em;
+}
+
 #table-leave-promotion-targets th,
 #table-leave-promotion-targets td {
   white-space: nowrap;
