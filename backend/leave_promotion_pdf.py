@@ -105,11 +105,13 @@ _PAD_PT = 4 * 72 / 25.4
 _KO_FONT = "AttendNanumGothic"
 # yuncha.pdf 본문 span size ≈ 11.04 — 아래 설명 단락과 동일
 _BODY_FONTSIZE = 11.04
-# insert_textbox 줄간격 배수 (None 과 동일하게 1.2 전후가 템플릿과 유사)
-_BODY_LINEHEIGHT_FACTOR = 1.2
+# insert_textbox 줄간격 배수 — 템플릿 첫 단락 두 줄 베이스라인 간격(~11pt×1.95)에 맞춤
+_BODY_LINEHEIGHT_FACTOR = 1.95
+# 양식 표는 얇은 실선 느낌 — 재그린 이름·입사일 칸만 너무 굵지 않게
+_TABLE_BORDER_WIDTH = 0.35
 
 
-def _stroke_cell_rect(page, rect, width: float = 0.55) -> None:
+def _stroke_cell_rect(page, rect, width: float = _TABLE_BORDER_WIDTH) -> None:
     """값 칸 redact 로 지워진 테두리를 사각형으로 다시 그린다 (상·하·좌·우)."""
     import fitz
 
