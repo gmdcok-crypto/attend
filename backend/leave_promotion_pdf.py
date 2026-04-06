@@ -99,6 +99,12 @@ def _fmt_days(v: object) -> str:
     return str(round(x, 1))
 
 
+# yuncha.pdf 표 구분선 기준 데이터 들여쓰기 (약 3mm)
+_PAD_PT = 3 * 72 / 25.4
+# insert_font 등록명 — insert_text / insert_textbox 에 fontname 으로 사용 (한글 깨짐 방지)
+_KO_FONT = "AttendNanumGothic"
+
+
 def _resolve_yuncha_template() -> Path:
     for p in YUNCHA_TEMPLATE_PATHS:
         if p.is_file():
@@ -112,7 +118,7 @@ def _fill_yuncha_pdf_bytes(emp: dict, annual: dict, year: int) -> bytes:
     import fitz
 
     _ensure_korean_font()
-    font = str(FONT_PATH)
+    font_path = str(FONT_PATH)
     template = _resolve_yuncha_template()
     doc = fitz.open(template)
     page = doc[0]
@@ -129,13 +135,20 @@ def _fill_yuncha_pdf_bytes(emp: dict, annual: dict, year: int) -> bytes:
         f"{rem}일의 연차 휴가를 추가로 사용할 수 있습니다."
     )
 
+    # 템플릿 첫 단락·이름/입사일 칸(점선·플레이스홀더) 덮기
     para_rect = fitz.Rect(72, 326, 528, 382)
+    name_val_rect = fitz.Rect(200.4, 151.6, 297.5, 177.8)
+    hire_box_rect = fitz.Rect(407.3, 151.6, 506.8, 177.8)
     page.add_redact_annot(para_rect, fill=(1, 1, 1))
+    page.add_redact_annot(name_val_rect, fill=(1, 1, 1))
+    page.add_redact_annot(hire_box_rect, fill=(1, 1, 1))
     page.apply_redactions()
+
+    page.insert_font(fontname=_KO_FONT, fontfile=font_path)
     tw = page.insert_textbox(
         para_rect,
         p1,
-        fontfile=font,
+        fontname=_KO_FONT,
         fontsize=10,
         color=(0, 0, 0),
         align=fitz.TEXT_ALIGN_LEFT,
@@ -143,18 +156,22 @@ def _fill_yuncha_pdf_bytes(emp: dict, annual: dict, year: int) -> bytes:
     if tw < 0:
         logger.warning("연차촉진 PDF 본문 텍스트박스 오버플로우 가능")
 
-    name = str(emp.get("name") or "")
+    name = str(emp.get("name") or "").strip() or "—"
     hire = _dot_date(emp.get("hire_date"))
 
-    # yuncha.pdf 레이아웃에 맞춘 좌표 (baseline 근처)
-    page.insert_text((165, 168), name, fontfile=font, fontsize=11, color=(0, 0, 0))
-    page.insert_text((375, 168), hire, fontfile=font, fontsize=11, color=(0, 0, 0))
-    page.insert_text((200, 196), period_s, fontfile=font, fontsize=10, color=(0, 0, 0))
-    page.insert_text((200, 224), occur_s, fontfile=font, fontsize=10, color=(0, 0, 0))
-    page.insert_text((430, 224), bd, fontfile=font, fontsize=10, color=(0, 0, 0))
-    page.insert_text((200, 252), period_s, fontfile=font, fontsize=10, color=(0, 0, 0))
-    page.insert_text((200, 280), used, fontfile=font, fontsize=10, color=(0, 0, 0))
-    page.insert_text((400, 280), rem, fontfile=font, fontsize=10, color=(0, 0, 0))
+    # yuncha.pdf 표 세로선 기준: 이름 값(200~297), 입사일 값(407~508), 데이터는 약 3mm 들여쓰기
+    x_left = 200.4 + _PAD_PT
+    x_days_right = 409.3 + _PAD_PT
+    x_rem = 409.3 + _PAD_PT
+    y_r1 = 169.0
+    page.insert_text((x_left, y_r1), name, fontname=_KO_FONT, fontsize=11, color=(0, 0, 0))
+    page.insert_text((hire_box_rect.x0 + _PAD_PT, y_r1), hire, fontname=_KO_FONT, fontsize=11, color=(0, 0, 0))
+    page.insert_text((x_left, 196), period_s, fontname=_KO_FONT, fontsize=10, color=(0, 0, 0))
+    page.insert_text((x_left, 224), occur_s, fontname=_KO_FONT, fontsize=10, color=(0, 0, 0))
+    page.insert_text((x_days_right, 224), bd, fontname=_KO_FONT, fontsize=10, color=(0, 0, 0))
+    page.insert_text((x_left, 252), period_s, fontname=_KO_FONT, fontsize=10, color=(0, 0, 0))
+    page.insert_text((x_left, 280), used, fontname=_KO_FONT, fontsize=10, color=(0, 0, 0))
+    page.insert_text((x_rem, 280), rem, fontname=_KO_FONT, fontsize=10, color=(0, 0, 0))
 
     buf = io.BytesIO()
     doc.save(buf)
