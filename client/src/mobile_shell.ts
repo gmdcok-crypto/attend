@@ -208,7 +208,6 @@ export function attendAppMarkup(): string {
         <div id="lpromo-main" hidden>
           <div class="lpromo-doc">
             <h2 class="lpromo-doc-title" id="lpromo-title"></h2>
-            <p class="lpromo-meta" id="lpromo-version"></p>
             <pre class="lpromo-body" id="lpromo-message" hidden></pre>
             <p class="lpromo-pdf-hint">아래는 본인 정보가 반영된 안내 미리보기입니다. 전체 문서는 「PDF 열기」로 확인할 수 있습니다.</p>
             <p class="leave-promo-pdf-status" id="lpromo-pdf-status" role="status" hidden></p>
@@ -500,11 +499,8 @@ async function refreshLeavePromoScreen(soft = false): Promise<void> {
       emptyEl.hidden = true
       mainEl.hidden = false
       const titleEl = document.getElementById('lpromo-title')
-      const verEl = document.getElementById('lpromo-version')
       const msgEl = document.getElementById('lpromo-message')
       if (titleEl) titleEl.textContent = c.title
-      if (verEl)
-        verEl.textContent = `문서 버전 ${c.doc_version} · 캠페인 해시 ${c.doc_hash.slice(0, 12)}… · 서명 시 본인 PDF 기준`
       if (msgEl) {
         const raw = (c.message ?? '').trim()
         msgEl.textContent = raw

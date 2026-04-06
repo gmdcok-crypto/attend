@@ -763,13 +763,6 @@ body {
   font-weight: 700;
 }
 
-.lpromo-meta {
-  margin: 0 0 12px;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  word-break: break-all;
-}
-
 .lpromo-pdf-hint {
   margin: 0 0 8px;
   font-size: 0.8125rem;
