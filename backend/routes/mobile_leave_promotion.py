@@ -4,11 +4,15 @@ from __future__ import annotations
 
 import re
 
+import hashlib
+
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from backend.database import Connection, DictCursor, get_db
 from backend.deps_mobile import get_mobile_employee_id
+from backend.leave_promotion_pdf import build_personalized_pdf_bytes
 from backend.passwords import hash_password, verify_password
 
 pin_router = APIRouter(prefix="/mobile/pin", tags=["mobile-pin"])
@@ -116,6 +120,44 @@ def get_current(
     }
 
 
+@lp_router.get("/current/pdf")
+def get_current_pdf(
+    employee_id: int = Depends(get_mobile_employee_id),
+    conn: Connection = Depends(get_db),
+) -> Response:
+    """개인별 연차촉진 안내 PDF (DB 병합). 인증 필요."""
+    cur = conn.cursor(DictCursor)
+    cur.execute(
+        """
+        SELECT c.id
+        FROM leave_promotion_targets t
+        INNER JOIN leave_promotion_campaigns c ON c.id = t.campaign_id
+        WHERE t.employee_id = %s
+        ORDER BY c.id DESC
+        LIMIT 1
+        """,
+        (employee_id,),
+    )
+    row = cur.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="대상 캠페인이 없습니다.")
+    cid = int(row["id"])
+    try:
+        pdf_bytes = build_personalized_pdf_bytes(conn, cid, employee_id)
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PDF 생성 실패: {e!s}") from e
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": 'inline; filename="leave-promotion.pdf"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
 @lp_router.post("/{campaign_id}/read")
 def mark_read(
     campaign_id: int,
@@ -160,9 +202,8 @@ def sign(
 
     cur.execute(
         """
-        SELECT c.doc_hash AS doc_hash, t.signed_at AS signed_at
+        SELECT t.signed_at AS signed_at
         FROM leave_promotion_targets t
-        JOIN leave_promotion_campaigns c ON c.id = t.campaign_id
         WHERE t.campaign_id = %s AND t.employee_id = %s
         LIMIT 1
         """,
@@ -174,7 +215,11 @@ def sign(
     if r.get("signed_at"):
         raise HTTPException(status_code=400, detail="이미 서명이 완료되었습니다.")
 
-    doc_hash = str(r["doc_hash"])
+    try:
+        pdf_bytes = build_personalized_pdf_bytes(conn, campaign_id, employee_id)
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    doc_hash = hashlib.sha256(pdf_bytes).hexdigest()
     client_ip = request.client.host if request.client else None
     ua = (request.headers.get("user-agent") or "")[:512]
 

@@ -103,6 +103,39 @@ export async function apiMobileJson<T>(path: string, init?: RequestInit): Promis
   return parseJsonResponse<T>(r)
 }
 
+async function parseBlobResponse(r: Response): Promise<Blob> {
+  if (!r.ok) {
+    const text = await r.text()
+    let msg = text || r.statusText
+    try {
+      const data = JSON.parse(text) as { detail?: unknown }
+      if (typeof data.detail === 'string') msg = data.detail
+    } catch {
+      /* ignore */
+    }
+    throw new Error(msg)
+  }
+  return r.blob()
+}
+
+/** PDF 등 바이너리 — 401 시 refresh 후 1회 재시도 */
+export async function apiMobileBlob(path: string, init?: RequestInit): Promise<Blob> {
+  const tryRequest = async (): Promise<Response> => {
+    const headers = buildHeaders(init, true) as Record<string, string>
+    headers.Accept = 'application/pdf'
+    return fetch(path, { ...init, headers })
+  }
+
+  let r = await tryRequest()
+  if (r.status === 401 && !shouldSkipAutoRefresh(path) && readSession()?.refresh_token) {
+    const refreshed = await refreshAccessToken()
+    if (refreshed) {
+      r = await tryRequest()
+    }
+  }
+  return parseBlobResponse(r)
+}
+
 export function readSession(): MobileSession | null {
   try {
     const raw = localStorage.getItem(SESSION_KEY)

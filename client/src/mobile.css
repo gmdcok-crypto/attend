@@ -715,6 +715,35 @@ body {
   word-break: break-all;
 }
 
+.lpromo-pdf-hint {
+  margin: 0 0 8px;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.leave-promo-pdf-status {
+  margin: 0 0 8px;
+  font-size: 0.8125rem;
+  color: var(--danger, #dc2626);
+}
+
+.lpromo-pdf-wrap {
+  width: 100%;
+  min-height: 220px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: #f3f4f6;
+}
+
+.lpromo-pdf-frame {
+  display: block;
+  width: 100%;
+  min-height: 50vh;
+  max-height: 70vh;
+  border: 0;
+}
+
 .lpromo-body {
   margin: 0;
   font-family: inherit;

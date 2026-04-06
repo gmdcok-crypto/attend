@@ -1,7 +1,7 @@
 /**
  * 출근·스캔·기록 UI (attend.html 전용). DOM 주입 후 wireAttendApp 호출.
  */
-import { apiMobileJson, clearSession, readSession, INDEX_PAGE } from './mobile_session'
+import { apiMobileBlob, apiMobileJson, clearSession, readSession, INDEX_PAGE } from './mobile_session'
 
 type QrScanModule = typeof import('./mobile_qr_scan')
 let qrScanModulePromise: Promise<QrScanModule> | null = null
@@ -197,7 +197,12 @@ export function attendAppMarkup(): string {
           <div class="lpromo-doc">
             <h2 class="lpromo-doc-title" id="lpromo-title"></h2>
             <p class="lpromo-meta" id="lpromo-version"></p>
-            <pre class="lpromo-body" id="lpromo-message"></pre>
+            <p class="lpromo-pdf-hint">아래 PDF는 본인 정보가 반영된 안내입니다.</p>
+            <p class="leave-promo-pdf-status" id="lpromo-pdf-status" role="status" hidden></p>
+            <div class="lpromo-pdf-wrap">
+              <iframe class="lpromo-pdf-frame" id="lpromo-pdf-frame" title="연차촉진 안내 PDF" hidden></iframe>
+            </div>
+            <pre class="lpromo-body" id="lpromo-message" hidden></pre>
           </div>
           <div class="lpromo-pin-setup" id="lpromo-pin-setup" hidden>
             <p class="lpromo-hint">전자서명 전에 6자리 PIN을 설정합니다.</p>
@@ -299,6 +304,7 @@ type LeavePromoCurrent = {
 }
 
 let leavePromoCampaignId: number | null = null
+let leavePromoPdfObjectUrl: string | null = null
 
 function escHtml(s: string): string {
   return s
@@ -331,6 +337,36 @@ function showLpromoMsg(text: string, kind: 'ok' | 'err' | '' = ''): void {
   if (kind === 'err') el.classList.add('leave-promo-msg--err')
 }
 
+async function loadLeavePromoPdf(): Promise<void> {
+  const frame = document.getElementById('lpromo-pdf-frame') as HTMLIFrameElement | null
+  const statusEl = document.getElementById('lpromo-pdf-status')
+  const fallbackPre = document.getElementById('lpromo-message')
+  if (leavePromoPdfObjectUrl) {
+    URL.revokeObjectURL(leavePromoPdfObjectUrl)
+    leavePromoPdfObjectUrl = null
+  }
+  if (!frame) return
+  frame.removeAttribute('src')
+  frame.hidden = true
+  if (statusEl) {
+    statusEl.hidden = true
+    statusEl.textContent = ''
+  }
+  try {
+    const blob = await apiMobileBlob('/api/mobile/leave-promotion/current/pdf', { method: 'GET' })
+    leavePromoPdfObjectUrl = URL.createObjectURL(blob)
+    frame.src = leavePromoPdfObjectUrl
+    frame.hidden = false
+    if (fallbackPre) fallbackPre.hidden = true
+  } catch (e) {
+    if (fallbackPre) fallbackPre.hidden = false
+    if (statusEl) {
+      statusEl.hidden = false
+      statusEl.textContent = `PDF를 불러오지 못했습니다. (${String(e)})`
+    }
+  }
+}
+
 async function refreshLeavePromoScreen(): Promise<void> {
   const emptyEl = document.getElementById('lpromo-empty')
   const mainEl = document.getElementById('lpromo-main')
@@ -340,6 +376,10 @@ async function refreshLeavePromoScreen(): Promise<void> {
   const signForm = document.getElementById('lpromo-sign-form')
   showLpromoMsg('')
   leavePromoCampaignId = null
+  if (leavePromoPdfObjectUrl) {
+    URL.revokeObjectURL(leavePromoPdfObjectUrl)
+    leavePromoPdfObjectUrl = null
+  }
   if (!emptyEl || !mainEl) return
   emptyEl.hidden = false
   emptyEl.textContent = '불러오는 중…'
@@ -363,10 +403,12 @@ async function refreshLeavePromoScreen(): Promise<void> {
     const verEl = document.getElementById('lpromo-version')
     const msgEl = document.getElementById('lpromo-message')
     if (titleEl) titleEl.textContent = c.title
-    if (verEl) verEl.textContent = `문서 버전 ${c.doc_version} · 해시 ${c.doc_hash.slice(0, 12)}…`
+    if (verEl)
+      verEl.textContent = `문서 버전 ${c.doc_version} · 캠페인 해시 ${c.doc_hash.slice(0, 12)}… · 서명 시 본인 PDF 기준`
     if (msgEl) msgEl.textContent = c.message
 
     await apiMobileJson(`/api/mobile/leave-promotion/${c.id}/read`, { method: 'POST' })
+    await loadLeavePromoPdf()
 
     const signed = Boolean(c.signed_at)
     if (signedNote) signedNote.hidden = !signed
