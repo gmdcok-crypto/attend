@@ -99,24 +99,23 @@ def _fmt_days(v: object) -> str:
     return str(round(x, 1))
 
 
-# yuncha.pdf 표 구분선 기준 데이터 들여쓰기 (약 3mm)
-_PAD_PT = 3 * 72 / 25.4
+# yuncha.pdf 표 구분선 기준 데이터 들여쓰기 (약 4mm)
+_PAD_PT = 4 * 72 / 25.4
 # insert_font 등록명 — insert_text / insert_textbox 에 fontname 으로 사용 (한글 깨짐 방지)
 _KO_FONT = "AttendNanumGothic"
-# yuncha.pdf 본문(아래 설명 단락)과 동일한 크기 (템플릿 span size ≈ 11.04)
-_BODY_FONTSIZE = 11.0
+# yuncha.pdf 본문 span size ≈ 11.04 — 아래 설명 단락과 동일
+_BODY_FONTSIZE = 11.04
+# insert_textbox 줄간격 배수 (None 과 동일하게 1.2 전후가 템플릿과 유사)
+_BODY_LINEHEIGHT_FACTOR = 1.2
 
 
-def _stroke_cell_lrb(page, rect, width: float = 0.48) -> None:
-    """값 칸 전체 redact 시 사라지는 왼쪽·오른쪽·아래 테두리만 다시 그린다."""
+def _stroke_cell_rect(page, rect, width: float = 0.55) -> None:
+    """값 칸 redact 로 지워진 테두리를 사각형으로 다시 그린다 (상·하·좌·우)."""
     import fitz
 
-    r = rect
     shape = page.new_shape()
-    shape.draw_line(fitz.Point(r.x0, r.y0), fitz.Point(r.x0, r.y1))
-    shape.draw_line(fitz.Point(r.x1, r.y0), fitz.Point(r.x1, r.y1))
-    shape.draw_line(fitz.Point(r.x0, r.y1), fitz.Point(r.x1, r.y1))
-    shape.finish(color=(0, 0, 0), width=width)
+    shape.draw_rect(rect)
+    shape.finish(color=(0, 0, 0), width=width, fill=None)
     shape.commit()
 
 
@@ -150,8 +149,8 @@ def _fill_yuncha_pdf_bytes(emp: dict, annual: dict, year: int) -> bytes:
         f"{rem}일의 연차 휴가를 추가로 사용할 수 있습니다."
     )
 
-    # 템플릿 첫 단락·이름/입사일 칸(점선·플레이스홀더) 덮기
-    para_rect = fitz.Rect(72, 326, 528, 382)
+    # 템플릿 첫 단락·이름/입사일 칸(점선·플레이스홀더) 덮기 (줄바꿈 3줄까지 여유)
+    para_rect = fitz.Rect(72, 326, 528, 412)
     name_val_rect = fitz.Rect(200.4, 151.6, 297.5, 177.8)
     hire_box_rect = fitz.Rect(407.3, 151.6, 506.8, 177.8)
     page.add_redact_annot(para_rect, fill=(1, 1, 1))
@@ -165,6 +164,7 @@ def _fill_yuncha_pdf_bytes(emp: dict, annual: dict, year: int) -> bytes:
         p1,
         fontname=_KO_FONT,
         fontsize=_BODY_FONTSIZE,
+        lineheight=_BODY_LINEHEIGHT_FACTOR,
         color=(0, 0, 0),
         align=fitz.TEXT_ALIGN_LEFT,
     )
@@ -188,8 +188,8 @@ def _fill_yuncha_pdf_bytes(emp: dict, annual: dict, year: int) -> bytes:
     page.insert_text((x_left, 280), used, fontname=_KO_FONT, fontsize=10, color=(0, 0, 0))
     page.insert_text((x_rem, 280), rem, fontname=_KO_FONT, fontsize=10, color=(0, 0, 0))
 
-    _stroke_cell_lrb(page, name_val_rect)
-    _stroke_cell_lrb(page, hire_box_rect)
+    _stroke_cell_rect(page, name_val_rect)
+    _stroke_cell_rect(page, hire_box_rect)
 
     buf = io.BytesIO()
     doc.save(buf)

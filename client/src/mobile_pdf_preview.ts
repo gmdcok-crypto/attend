@@ -19,17 +19,23 @@ export async function renderPdfPreview(host: HTMLElement, data: ArrayBuffer): Pr
     320,
   )
 
+  const pixelRatio = Math.min(window.devicePixelRatio ?? 1, 3)
+
   for (let i = 1; i <= pages; i++) {
     const page = await pdf.getPage(i)
     const baseViewport = page.getViewport({ scale: 1 })
-    const scale = containerWidth / baseViewport.width
-    const viewport = page.getViewport({ scale })
+    const cssScale = containerWidth / baseViewport.width
+    const viewport = page.getViewport({ scale: cssScale * pixelRatio })
 
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')
     if (!ctx) throw new Error('canvas 2d')
     canvas.width = Math.floor(viewport.width)
     canvas.height = Math.floor(viewport.height)
+    const cssW = viewport.width / pixelRatio
+    const cssH = viewport.height / pixelRatio
+    canvas.style.width = `${cssW}px`
+    canvas.style.height = `${cssH}px`
     canvas.className = 'lpromo-pdf-page-canvas'
 
     const task = page.render({ canvasContext: ctx, viewport })
