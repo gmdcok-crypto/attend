@@ -20,7 +20,7 @@ def _remaining_total_for_year(conn: Connection, emp_id: int, year: int) -> float
     try:
         p = _annual_line_payload(conn, emp_id, year)
         return float(p["remaining_days"])
-    except HTTPException:
+    except (HTTPException, ValueError, TypeError, KeyError):
         return None
 
 
@@ -185,7 +185,7 @@ def add_targets_with_remaining_annual(
     year: Optional[int] = Query(None, ge=2000, le=2100, description="기준 연도(기본: 올해)"),
     conn: Connection = Depends(get_db),
 ) -> dict:
-    """재직 사원 중 지정 연도 기준 연차(ANNUAL_LEAVE_CODE) 잔여일수 > 0 인 사람만 대상에 추가."""
+    """지정 연도 기준 연차 잔여일수 > 0 인 재직 사원을 우선 추가. 한 명도 없으면(잔여 0·산정 불가 등) 재직 사원 전원을 대상에 넣음."""
     cur = conn.cursor(DictCursor)
     cur.execute(
         "SELECT id FROM leave_promotion_campaigns WHERE id = %s LIMIT 1",
@@ -221,10 +221,36 @@ def add_targets_with_remaining_annual(
         )
         added += int(cur2.rowcount or 0)
     conn.commit()
+
+    # 잔여>0 인 사원이 한 명도 없으면(또는 산정 실패) 대상이 비어 캠페인이 쓸 수 없음 → 재직 사원 전원을 넣는 폴백
+    cur.execute(
+        "SELECT COUNT(*) AS n FROM leave_promotion_targets WHERE campaign_id = %s",
+        (campaign_id,),
+    )
+    n_targets = int((cur.fetchone() or {}).get("n") or 0)
+    fallback_all_active = False
+    if n_targets == 0 and emp_rows:
+        cur2 = conn.cursor()
+        fb_added = 0
+        for r in emp_rows:
+            eid = int(r["id"])
+            cur2.execute(
+                """
+                INSERT IGNORE INTO leave_promotion_targets (campaign_id, employee_id)
+                VALUES (%s, %s)
+                """,
+                (campaign_id, eid),
+            )
+            fb_added += int(cur2.rowcount or 0)
+        conn.commit()
+        fallback_all_active = True
+        added += fb_added
+
     return {
         "year": y,
         "added": added,
         "with_remaining_annual": with_remaining,
+        "fallback_all_active": fallback_all_active,
     }
 
 

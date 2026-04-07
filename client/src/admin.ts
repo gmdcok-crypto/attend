@@ -587,11 +587,26 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
           <div class="crud-layout leave-promo-top-layout">
             <div class="crud-table-col">
               <div class="panel">
-                <div class="panel-hd"><h3>연차촉진 대상자</h3></div>
+                <div class="panel-hd leave-promo-target-panel-hd">
+                  <div class="leave-promo-target-panel-hd-text">
+                    <h3>연차촉진 대상자</h3>
+                    <p class="leave-promo-target-sub" id="lp-target-panel-sub">
+                      테이블의 1차·2차 열은 「1차 발송」「2차 발송」 버튼을 눌렀을 때 기록되는 시각입니다. 캠페인 등록만으로는 채워지지 않습니다.
+                    </p>
+                  </div>
+                </div>
                 <div class="panel-bd table-wrap table-wrap--leave-promo-targets">
                   <table class="data-table" id="table-leave-promotion-targets">
                     <thead>
-                      <tr><th>사번</th><th>성명</th><th>부서</th><th>잔여</th><th>1차</th><th>2차</th><th>서명</th></tr>
+                      <tr>
+                        <th>사번</th>
+                        <th>성명</th>
+                        <th>부서</th>
+                        <th>잔여</th>
+                        <th title="1차 발송 버튼으로 처리한 시각">1차 발송</th>
+                        <th title="2차 발송 버튼으로 처리한 시각">2차 발송</th>
+                        <th>서명</th>
+                      </tr>
                     </thead>
                     <tbody id="tbody-leave-promotion-targets">
                       <tr><td colspan="7" class="admin-empty-msg">조회 버튼을 눌러 대상자를 불러오세요.</td></tr>
@@ -1434,6 +1449,16 @@ function applyLeavePromotionStats(c: LpCampaignRow | null | undefined): void {
   if (stP) stP.textContent = c ? String(Math.max(0, c.target_count - c.signed_count)) : '0'
   if (st1) st1.textContent = c ? String(c.first_sent_count) : '0'
   if (st2) st2.textContent = c ? String(c.second_sent_count) : '0'
+  const sub = document.getElementById('lp-target-panel-sub')
+  if (sub) {
+    const tail =
+      '테이블의 1차·2차 열은 「1차 발송」「2차 발송」 버튼을 눌렀을 때 기록되는 시각입니다. 캠페인 등록만으로는 채워지지 않습니다.'
+    if (c?.created_at) {
+      sub.textContent = `이 캠페인 등록: ${lpFmtDt(c.created_at)} · ${tail}`
+    } else {
+      sub.textContent = tail
+    }
+  }
 }
 
 function fillLeavePromotionCampaignSelect(campaigns: LpCampaignRow[], sel: HTMLSelectElement | null): void {

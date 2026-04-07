@@ -584,6 +584,23 @@ body {
   margin-bottom: 18px;
 }
 
+.leave-promo-target-panel-hd {
+  align-items: flex-start;
+}
+
+.leave-promo-target-panel-hd-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.leave-promo-target-sub {
+  margin: 8px 0 0;
+  font-size: 0.8125rem;
+  color: var(--a-muted);
+  line-height: 1.45;
+  font-weight: 400;
+}
+
 /* 연차촉진: 좌측 대상자 표 + 우측 조회 조건 (통계 바로 아래 한 줄) */
 .leave-promo-top-layout {
   grid-template-columns: minmax(0, 68%) minmax(300px, 1fr);
