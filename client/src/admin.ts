@@ -400,42 +400,6 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
                   <button type="button" class="btn btn-danger" id="leave-emp-btn-delete">삭제</button>
                 </div>
               </div>
-              <div class="form-panel panel form-panel--inline" style="margin-top: 14px">
-                <div class="panel-hd">
-                  <h3>연도별 배정 · 초기 사용</h3>
-                </div>
-                <p class="dashboard-meta" style="margin-top: 0">
-                  도입 전 사용분만 수동으로 넣습니다. 이후 사용일은 위 휴가 기간으로 자동 합산됩니다.
-                </p>
-                <div class="form-fields form-fields--inline-rows">
-                  <div class="form-field form-field--row">
-                    <label for="leave-q-no">사번</label>
-                    <input type="text" id="leave-q-no" autocomplete="off" />
-                    <span id="leave-q-name" class="dashboard-meta" style="margin-left: 8px"></span>
-                  </div>
-                  <div class="form-field form-field--row">
-                    <label for="leave-q-year">기준연도</label>
-                    <input type="number" id="leave-q-year" min="2000" max="2100" />
-                  </div>
-                  <div class="form-field form-field--row">
-                    <label for="leave-q-code">휴가</label>
-                    <select id="leave-q-code">
-                      <option value="">선택</option>
-                    </select>
-                  </div>
-                  <div class="form-field form-field--row">
-                    <label for="leave-q-quota">배정 일수</label>
-                    <input type="number" id="leave-q-quota" min="0" step="0.5" />
-                  </div>
-                  <div class="form-field form-field--row">
-                    <label for="leave-q-initial">초기 사용(수동)</label>
-                    <input type="number" id="leave-q-initial" min="0" step="0.5" value="0" />
-                  </div>
-                </div>
-                <div class="form-actions">
-                  <button type="button" class="btn btn-primary" id="leave-q-btn-save">배정·초기 저장</button>
-                </div>
-              </div>
             </div>
           </div>
         </section>
@@ -2250,15 +2214,11 @@ function normalizeTimeInput(s: string): string {
 function initLeaveEmpToolbarDates() {
   const from = document.getElementById('leave-emp-date-from') as HTMLInputElement | null
   const to = document.getElementById('leave-emp-date-to') as HTMLInputElement | null
-  const qYear = document.getElementById('leave-q-year') as HTMLInputElement | null
   if (!from || !to) return
   if (!from.value || !to.value) {
     const y = new Date().getFullYear()
     from.value = `${y}-01-01`
     to.value = `${y}-12-31`
-  }
-  if (qYear && !qYear.value) {
-    qYear.value = String(new Date().getFullYear())
   }
 }
 
@@ -2289,12 +2249,6 @@ function wireLeaveEmp() {
   const nameEl = document.getElementById('leave-emp-name') as HTMLInputElement | null
   const startEl = document.getElementById('leave-emp-start') as HTMLInputElement | null
   const endEl = document.getElementById('leave-emp-end') as HTMLInputElement | null
-  const leaveQCode = document.getElementById('leave-q-code') as HTMLSelectElement | null
-  const leaveQNo = document.getElementById('leave-q-no') as HTMLInputElement | null
-  const leaveQYear = document.getElementById('leave-q-year') as HTMLInputElement | null
-  const leaveQQuota = document.getElementById('leave-q-quota') as HTMLInputElement | null
-  const leaveQInitial = document.getElementById('leave-q-initial') as HTMLInputElement | null
-  const leaveQName = document.getElementById('leave-q-name') as HTMLSpanElement | null
   if (!tbody || !sel || !noEl || !nameEl || !startEl || !endEl) {
     console.error('[admin] wireLeaveEmp: DOM 없음')
     return
@@ -2325,11 +2279,6 @@ function wireLeaveEmp() {
     empNameEl.value = tr.dataset.employeeName ?? ''
     const lc = tr.dataset.leaveCodeId ?? ''
     leaveSel.value = lc
-    if (leaveQNo) leaveQNo.value = tr.dataset.employeeNo ?? ''
-    if (leaveQName) leaveQName.textContent = tr.dataset.employeeName ?? ''
-    if (leaveQCode && lc && [...leaveQCode.options].some((o) => o.value === lc)) {
-      leaveQCode.value = lc
-    }
     const sd = tr.dataset.startDate ?? ''
     const ed = tr.dataset.endDate ?? ''
     startInp.value = sd.length >= 10 ? sd.slice(0, 10) : sd
@@ -2345,7 +2294,6 @@ function wireLeaveEmp() {
 
   async function loadLeaveCodeOptions() {
     const v = leaveSel.value
-    const vq = leaveQCode?.value ?? ''
     leaveSel.innerHTML = ''
     const rows = await apiJson<LeaveRow[]>('/api/leave-codes')
     for (const row of rows) {
@@ -2355,16 +2303,6 @@ function wireLeaveEmp() {
       leaveSel.appendChild(o)
     }
     if (v && [...leaveSel.options].some((o) => o.value === v)) leaveSel.value = v
-    if (leaveQCode) {
-      leaveQCode.innerHTML = ''
-      for (const row of rows) {
-        const o = document.createElement('option')
-        o.value = String(row.id)
-        o.textContent = `${row.code} · ${row.name}`
-        leaveQCode.appendChild(o)
-      }
-      if (vq && [...leaveQCode.options].some((o) => o.value === vq)) leaveQCode.value = vq
-    }
   }
 
   async function loadLeaveEmpTable() {
@@ -2422,64 +2360,8 @@ function wireLeaveEmp() {
       })
   })
 
-  leaveQNo?.addEventListener('blur', () => {
-    const no = leaveQNo.value.trim()
-    if (!no) {
-      if (leaveQName) leaveQName.textContent = ''
-      return
-    }
-    apiJson<{ name: string }>(`/api/employees/by-number/${encodeURIComponent(no)}`)
-      .then((r) => {
-        if (leaveQName) leaveQName.textContent = r.name
-      })
-      .catch(() => {
-        if (leaveQName) leaveQName.textContent = ''
-      })
-  })
-
   bindButtonById('leave-emp-btn-search', '개인별 휴가', () => {
     loadLeaveEmpTable().catch((err) => adminAlert(String(err)))
-  })
-
-  bindButtonById('leave-q-btn-save', '개인별 휴가', () => {
-    const employee_no = leaveQNo?.value?.trim() ?? ''
-    const year_year = parseInt(leaveQYear?.value?.trim() ?? '', 10)
-    const leave_code_id = parseInt(leaveQCode?.value ?? '', 10)
-    const quota_days = parseFloat(leaveQQuota?.value?.trim() ?? '')
-    const initial_used_days = parseFloat(leaveQInitial?.value?.trim() ?? '0')
-    if (!employee_no) {
-      adminAlert('사번을 입력하세요.')
-      return
-    }
-    if (!year_year || Number.isNaN(year_year)) {
-      adminAlert('기준연도를 입력하세요.')
-      return
-    }
-    if (!leave_code_id || Number.isNaN(leave_code_id)) {
-      adminAlert('휴가 종류를 선택하세요.')
-      return
-    }
-    if (leaveQQuota?.value?.trim() === '' || Number.isNaN(quota_days) || quota_days < 0) {
-      adminAlert('배정 일수를 0 이상으로 입력하세요.')
-      return
-    }
-    if (Number.isNaN(initial_used_days) || initial_used_days < 0) {
-      adminAlert('초기 사용(수동)은 0 이상으로 입력하세요.')
-      return
-    }
-    void apiJson('/api/employee-leaves/quotas/upsert', {
-      method: 'PUT',
-      body: JSON.stringify({
-        employee_no,
-        leave_code_id,
-        year_year,
-        quota_days,
-        initial_used_days,
-      }),
-    })
-      .then(() => loadLeaveEmpTable())
-      .then(() => adminAlert('배정·초기 사용이 저장되었습니다.'))
-      .catch((err) => adminAlert(String(err)))
   })
 
   bindButtonById('leave-emp-btn-save', '개인별 휴가', () => {
