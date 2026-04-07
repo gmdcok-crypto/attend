@@ -1328,18 +1328,25 @@ function resetLeavePromotionQueryFiltersToAll(): void {
   if (deptEl) deptEl.value = ''
 }
 
-async function runLeavePromotionSearch(showAlertWhenNoCampaign = false) {
+/**
+ * @param campaignIdOverride 갱신 직후 등 DOM과 어긋날 수 있으므로, 탭/캠페인 새로고침 시 선택된 캠페인 id를 직접 넘김
+ */
+async function runLeavePromotionSearch(showAlertWhenNoCampaign = false, campaignIdOverride?: number | null) {
   const tb = document.getElementById('tbody-leave-promotion-targets')
   if (!tb) return
 
-  const campSel = document.getElementById('lp-campaign-select') as HTMLSelectElement | null
-  const rawCamp = campSel?.value?.trim() ?? ''
   let id: number | null = null
-  if (rawCamp) {
-    const p = parseInt(rawCamp, 10)
-    if (Number.isFinite(p) && p > 0) id = p
+  if (campaignIdOverride != null && Number.isFinite(campaignIdOverride) && campaignIdOverride > 0) {
+    id = campaignIdOverride
+  } else {
+    const campSel = document.getElementById('lp-campaign-select') as HTMLSelectElement | null
+    const rawCamp = campSel?.value?.trim() ?? ''
+    if (rawCamp) {
+      const p = parseInt(rawCamp, 10)
+      if (Number.isFinite(p) && p > 0) id = p
+    }
+    if (id == null) id = latestLeavePromotionCampaignId
   }
-  if (id == null) id = latestLeavePromotionCampaignId
   if (id != null) latestLeavePromotionCampaignId = id
 
   if (!id) {
@@ -1450,12 +1457,20 @@ async function refreshLeavePromotionView(preferredCampaignId?: number | null) {
   if (yEl && !yEl.value?.trim()) {
     yEl.value = String(new Date().getFullYear())
   }
-  const campaigns = await apiJson<LpCampaignRow[]>('/api/leave-promotion/campaigns')
+  let campaigns = await apiJson<LpCampaignRow[]>('/api/leave-promotion/campaigns')
+  if (
+    preferredCampaignId != null &&
+    Number.isFinite(preferredCampaignId) &&
+    !campaigns.some((c) => c.id === preferredCampaignId)
+  ) {
+    await new Promise((r) => setTimeout(r, 80))
+    campaigns = await apiJson<LpCampaignRow[]>('/api/leave-promotion/campaigns')
+  }
   const ids = campaigns.map((x) => x.id)
   const sel = document.getElementById('lp-campaign-select') as HTMLSelectElement | null
   fillLeavePromotionCampaignSelect(campaigns, sel)
   let pick: number | null = null
-  if (preferredCampaignId != null && ids.includes(preferredCampaignId)) {
+  if (preferredCampaignId != null && Number.isFinite(preferredCampaignId) && preferredCampaignId > 0) {
     pick = preferredCampaignId
   } else if (latestLeavePromotionCampaignId != null && ids.includes(latestLeavePromotionCampaignId)) {
     pick = latestLeavePromotionCampaignId
@@ -1463,8 +1478,16 @@ async function refreshLeavePromotionView(preferredCampaignId?: number | null) {
     pick = campaigns[0].id
   }
   latestLeavePromotionCampaignId = pick
-  if (sel && pick != null) sel.value = String(pick)
-  await runLeavePromotionSearch()
+  if (sel && pick != null) {
+    if (!campaigns.some((c) => c.id === pick)) {
+      const o = document.createElement('option')
+      o.value = String(pick)
+      o.textContent = `#${pick} · 캠페인`
+      sel.appendChild(o)
+    }
+    sel.value = String(pick)
+  }
+  await runLeavePromotionSearch(false, pick)
 }
 
 function wireLeavePromotion() {
@@ -1496,7 +1519,7 @@ function wireLeavePromotion() {
       .then((created) => refreshLeavePromotionView(created.id))
       .then(() =>
         adminAlert(
-          '캠페인이 등록되었습니다. 기준연도 기준 연차 잔여가 있는 재직 사원이 대상에 자동 반영됩니다. 다른 캠페인은 위 「캠페인」에서 선택할 수 있습니다.',
+          '캠페인이 등록되었습니다. 기준연도에 연차 잔여가 있는 재직 사원만 대상에 올라갑니다. 테이블이 비어 있으면 해당 연도에 잔여 연차가 있는 사원이 없는 경우입니다. 기준연도·캠페인 선택을 확인하세요.',
         ),
       )
       .catch((err) => adminAlert(String(err)))
