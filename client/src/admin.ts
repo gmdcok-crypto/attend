@@ -611,7 +611,7 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
                 <div class="form-fields form-fields--inline-rows">
                   <div class="form-field form-field--row">
                     <label for="lp-campaign-select">캠페인</label>
-                    <select id="lp-campaign-select" title="등록된 캠페인 중 조회할 항목을 고릅니다. 새로 등록한 캠페인은 대상이 비어 있을 수 있습니다.">
+                    <select id="lp-campaign-select" title="등록된 캠페인 중 조회할 항목을 고릅니다. 탭을 열거나 캠페인을 바꾸면 기준연도 기준 잔여 연차가 있는 재직 사원이 대상에 자동 반영됩니다.">
                       <option value="">—</option>
                     </select>
                   </div>
@@ -661,8 +661,6 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
                 </div>
                 <div class="form-actions">
                   <button type="button" class="btn btn-primary" id="lp-btn-campaign-save">캠페인 등록</button>
-                  <button type="button" class="btn btn-ghost" id="lp-btn-add-all-targets">등록 사원 전원 추가</button>
-                  <button type="button" class="btn btn-ghost" id="lp-btn-add-remaining-targets">잔여 연차 있는 사원 추가</button>
                   <button type="button" class="btn btn-ghost" id="lp-btn-preview">미리보기</button>
                   <button type="button" class="btn btn-primary" id="lp-btn-send-first">1차 발송</button>
                   <button type="button" class="btn btn-update" id="lp-btn-send-second">2차 발송</button>
@@ -1354,12 +1352,27 @@ async function runLeavePromotionSearch(showAlertWhenNoCampaign = false) {
     }
     return
   }
-  tb.innerHTML =
-    '<tr><td colspan="7" class="admin-empty-msg">불러오는 중…</td></tr>'
+
   const yearEl = document.getElementById('lp-year') as HTMLInputElement | null
   const statusEl = document.getElementById('lp-status') as HTMLSelectElement | null
   const year = yearEl?.value?.trim() || String(new Date().getFullYear())
   const status = statusEl?.value?.trim() || ''
+
+  tb.innerHTML =
+    '<tr><td colspan="7" class="admin-empty-msg">불러오는 중…</td></tr>'
+  try {
+    await apiJson(`/api/leave-promotion/campaigns/${id}/targets/with-remaining-annual?year=${encodeURIComponent(year)}`, {
+      method: 'POST',
+    })
+  } catch (err) {
+    adminAlert(String(err))
+  }
+  const campaigns = await apiJson<LpCampaignRow[]>('/api/leave-promotion/campaigns')
+  const sel = document.getElementById('lp-campaign-select') as HTMLSelectElement | null
+  fillLeavePromotionCampaignSelect(campaigns, sel)
+  if (sel && campaigns.some((x) => x.id === id)) sel.value = String(id)
+  applyLeavePromotionStats(campaigns.find((x) => x.id === id) ?? null)
+
   const q = new URLSearchParams({ year })
   if (status) q.set('status', status)
   const rows = await apiJson<LpTargetRow[]>(`/api/leave-promotion/campaigns/${id}/targets?${q.toString()}`)
@@ -1382,7 +1395,7 @@ async function runLeavePromotionSearch(showAlertWhenNoCampaign = false) {
           '<tr><td colspan="7" class="admin-empty-msg">미서명 대상이 없습니다. (이미 모두 서명했을 수 있습니다.)</td></tr>'
       } else {
         tb.innerHTML =
-          '<tr><td colspan="7" class="admin-empty-msg">이 캠페인에 등록된 대상자가 없습니다. 「등록 사원 대상 추가」를 눌렀는지 확인하세요. 모바일 서명은 <strong>최신 캠페인</strong> 기준이므로, 여기서 선택한 캠페인과 같아야 합니다.</td></tr>'
+          '<tr><td colspan="7" class="admin-empty-msg">이 캠페인에 표시할 대상이 없습니다. 기준연도·부서·서명상태를 확인하거나, 해당 연도에 연차 잔여가 있는 재직 사원이 없을 수 있습니다. 모바일 서명은 <strong>최신 캠페인</strong> 기준이므로 여기서 고른 캠페인과 같아야 합니다.</td></tr>'
       }
     } else {
       tb.innerHTML =
@@ -1416,7 +1429,19 @@ function applyLeavePromotionStats(c: LpCampaignRow | null | undefined): void {
   if (st2) st2.textContent = c ? String(c.second_sent_count) : '0'
 }
 
+function fillLeavePromotionCampaignSelect(campaigns: LpCampaignRow[], sel: HTMLSelectElement | null): void {
+  if (!sel) return
+  sel.innerHTML = ''
+  for (const camp of campaigns) {
+    const o = document.createElement('option')
+    o.value = String(camp.id)
+    o.textContent = `#${camp.id} · ${camp.title} (대상 ${camp.target_count}명)`
+    sel.appendChild(o)
+  }
+}
+
 /**
+ * 캠페인 목록·선택을 맞춘 뒤 조회(잔여 연차 대상 자동 반영 + 테이블)를 실행합니다.
  * @param preferredCampaignId 방금 생성한 캠페인 id 등, 목록 갱신 후 이 캠페인을 선택할 때 사용
  */
 async function refreshLeavePromotionView(preferredCampaignId?: number | null) {
@@ -1428,15 +1453,7 @@ async function refreshLeavePromotionView(preferredCampaignId?: number | null) {
   const campaigns = await apiJson<LpCampaignRow[]>('/api/leave-promotion/campaigns')
   const ids = campaigns.map((x) => x.id)
   const sel = document.getElementById('lp-campaign-select') as HTMLSelectElement | null
-  if (sel) {
-    sel.innerHTML = ''
-    for (const camp of campaigns) {
-      const o = document.createElement('option')
-      o.value = String(camp.id)
-      o.textContent = `#${camp.id} · ${camp.title} (대상 ${camp.target_count}명)`
-      sel.appendChild(o)
-    }
-  }
+  fillLeavePromotionCampaignSelect(campaigns, sel)
   let pick: number | null = null
   if (preferredCampaignId != null && ids.includes(preferredCampaignId)) {
     pick = preferredCampaignId
@@ -1447,8 +1464,6 @@ async function refreshLeavePromotionView(preferredCampaignId?: number | null) {
   }
   latestLeavePromotionCampaignId = pick
   if (sel && pick != null) sel.value = String(pick)
-  const c = campaigns.find((x) => x.id === pick)
-  applyLeavePromotionStats(c ?? null)
   await runLeavePromotionSearch()
 }
 
@@ -1462,13 +1477,7 @@ function wireLeavePromotion() {
     const v = sel?.value?.trim()
     const id = v ? parseInt(v, 10) : NaN
     if (!Number.isFinite(id)) return
-    latestLeavePromotionCampaignId = id
-    void (async () => {
-      const campaigns = await apiJson<LpCampaignRow[]>('/api/leave-promotion/campaigns')
-      const c = campaigns.find((x) => x.id === id)
-      applyLeavePromotionStats(c ?? null)
-      await runLeavePromotionSearch()
-    })().catch((e) => adminAlert(String(e)))
+    void refreshLeavePromotionView(id).catch((e) => adminAlert(String(e)))
   })
   bindButtonById('lp-btn-campaign-save', '연차촉진', () => {
     const title =
@@ -1487,54 +1496,10 @@ function wireLeavePromotion() {
       .then((created) => refreshLeavePromotionView(created.id))
       .then(() =>
         adminAlert(
-          '캠페인이 등록되었습니다. 새 캠페인에는 촉진 대상이 비어 있습니다. 「등록 사원 대상 추가」로 넣거나, 이전 캠페인은 위 「캠페인」에서 선택해 확인할 수 있습니다.',
+          '캠페인이 등록되었습니다. 기준연도 기준 연차 잔여가 있는 재직 사원이 대상에 자동 반영됩니다. 다른 캠페인은 위 「캠페인」에서 선택할 수 있습니다.',
         ),
       )
       .catch((err) => adminAlert(String(err)))
-  })
-  bindButtonById('lp-btn-add-all-targets', '연차촉진', () => {
-    void (async () => {
-      const cid = latestLeavePromotionCampaignId
-      if (!cid) {
-        adminAlert('먼저 캠페인을 등록하세요.')
-        return
-      }
-      const emps = await apiJson<EmpRow[]>('/api/employees')
-      const ids = emps.map((e) => e.id)
-      if (!ids.length) {
-        adminAlert('등록된 사원이 없습니다.')
-        return
-      }
-      await apiJson<{ added: number }>(`/api/leave-promotion/campaigns/${cid}/targets`, {
-        method: 'POST',
-        body: JSON.stringify({ employee_ids: ids }),
-      })
-      await refreshLeavePromotionView()
-      adminAlert('등록된 사원을 촉진 대상에 반영했습니다.')
-    })().catch((e) => adminAlert(String(e)))
-  })
-  bindButtonById('lp-btn-add-remaining-targets', '연차촉진', () => {
-    void (async () => {
-      const cid = latestLeavePromotionCampaignId
-      if (!cid) {
-        adminAlert('먼저 캠페인을 등록하세요.')
-        return
-      }
-      const yearEl = document.getElementById('lp-year') as HTMLInputElement | null
-      const y = yearEl?.value?.trim() || String(new Date().getFullYear())
-      const res = await apiJson<{
-        year: number
-        added: number
-        with_remaining_annual: number
-      }>(
-        `/api/leave-promotion/campaigns/${cid}/targets/with-remaining-annual?year=${encodeURIComponent(y)}`,
-        { method: 'POST' },
-      )
-      await refreshLeavePromotionView()
-      adminAlert(
-        `기준연도 ${res.year}: 연차 잔여가 있는 재직 사원 ${res.with_remaining_annual}명 중 ${res.added}명을 새로 대상에 넣었습니다. (이미 있던 사원은 건너뜀)`,
-      )
-    })().catch((e) => adminAlert(String(e)))
   })
   bindButtonById('lp-btn-send-first', '연차촉진', () => {
     void (async () => {
