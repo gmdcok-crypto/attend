@@ -10,31 +10,18 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from backend.database import Connection, DictCursor, get_db
-from backend.routes.employee_leaves import (
-    _aggregate_workdays_by_year,
-    _load_all_records_for_aggregate,
-    _load_quota_maps,
-)
+from backend.routes.employee_leaves import _annual_line_payload
 
 router = APIRouter(prefix="/leave-promotion", tags=["leave-promotion"])
 
 
 def _remaining_total_for_year(conn: Connection, emp_id: int, year: int) -> float | None:
-    quotas, initials = _load_quota_maps(conn)
-    all_rec = _load_all_records_for_aggregate(conn, [emp_id])
-    agg = _aggregate_workdays_by_year(all_rec)
-    total_rem = 0.0
-    any_q = False
-    for key, qv in quotas.items():
-        eid, _lc, y = key
-        if eid != emp_id or y != year:
-            continue
-        any_q = True
-        used = float(agg.get(key, 0.0)) + float(initials.get(key, 0.0))
-        total_rem += float(qv) - used
-    if not any_q:
+    """연차(ANNUAL_LEAVE_CODE) 1줄 기준 잔여일수 — 입사일·휴가기록만 사용."""
+    try:
+        p = _annual_line_payload(conn, emp_id, year)
+        return float(p["remaining_days"])
+    except HTTPException:
         return None
-    return round(total_rem, 1)
 
 
 def _doc_hash(title: str, doc_version: str, message: str) -> str:

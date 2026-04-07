@@ -1865,20 +1865,10 @@ function wireCrudEmployees() {
       return
     }
     const id = selected.dataset.id
-    const y = new Date().getFullYear()
     apiJson(`/api/employees/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ employee_no, name, department_name, hire_date, status }),
     })
-      .then(async () => {
-        const usedNum = parseFloat(ul.value)
-        if (Number.isFinite(usedNum)) {
-          await apiJson(`/api/employee-leaves/employee/${id}/annual-line`, {
-            method: 'PUT',
-            body: JSON.stringify({ year: y, used_days: usedNum }),
-          })
-        }
-      })
       .then(() => loadEmployees())
       .then(() => {
         clearSelect()

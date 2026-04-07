@@ -42,14 +42,32 @@ def ensure_employee_auth_columns(conn: Connection) -> bool:
     return changed
 
 
+def drop_employee_leave_quotas_table(conn: Connection) -> bool:
+    """레거시 `employee_leave_quotas` 제거 (연도별 배정·초기사용 UI 폐기)."""
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT TABLE_NAME FROM information_schema.TABLES
+        WHERE TABLE_SCHEMA = DATABASE() AND LOWER(TABLE_NAME) = 'employee_leave_quotas'
+        """
+    )
+    if not cur.fetchone():
+        return False
+    cur.execute("SET FOREIGN_KEY_CHECKS = 0")
+    cur.execute("DROP TABLE IF EXISTS employee_leave_quotas")
+    cur.execute("SET FOREIGN_KEY_CHECKS = 1")
+    conn.commit()
+    return True
+
+
 def ensure_employee_leave_tables(conn: Connection) -> bool:
-    """employee_leave_records / employee_leave_quotas 없으면 생성."""
+    """employee_leave_records 없으면 생성."""
     cur = conn.cursor()
     cur.execute(
         """
         SELECT TABLE_NAME FROM information_schema.TABLES
         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN (
-          'employee_leave_records', 'employee_leave_quotas'
+          'employee_leave_records'
         )
         """
     )
@@ -78,54 +96,7 @@ def ensure_employee_leave_tables(conn: Connection) -> bool:
             """
         )
         changed = True
-    if "employee_leave_quotas" not in existing:
-        cur.execute(
-            """
-            CREATE TABLE IF NOT EXISTS employee_leave_quotas (
-              id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-              employee_id BIGINT UNSIGNED NOT NULL,
-              leave_code_id BIGINT UNSIGNED NOT NULL,
-              year_year SMALLINT NOT NULL COMMENT '적용 연도',
-              quota_days DECIMAL(7, 1) NOT NULL DEFAULT 0 COMMENT '부여 일수',
-              created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
-              updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
-                ON UPDATE CURRENT_TIMESTAMP(3),
-              PRIMARY KEY (id),
-              UNIQUE KEY uk_elq_emp_leave_year (employee_id, leave_code_id, year_year),
-              KEY idx_elq_emp (employee_id),
-              CONSTRAINT fk_elq_employee FOREIGN KEY (employee_id) REFERENCES employees (id)
-                ON DELETE CASCADE ON UPDATE CASCADE,
-              CONSTRAINT fk_elq_leave FOREIGN KEY (leave_code_id) REFERENCES leave_codes (id)
-                ON DELETE CASCADE ON UPDATE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-            """
-        )
-        changed = True
     return changed
-
-
-def ensure_employee_leave_quotas_initial_used_column(conn: Connection) -> bool:
-    """employee_leave_quotas.initial_used_days 없으면 추가 (도입 전 수동 사용일)."""
-    cur = conn.cursor()
-    cur.execute(
-        """
-        SELECT COLUMN_NAME FROM information_schema.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE() AND LOWER(TABLE_NAME) = 'employee_leave_quotas'
-        """
-    )
-    existing = {str(row[0]).lower() for row in (cur.fetchall() or [])}
-    if not existing:
-        return False
-    if "initial_used_days" in existing:
-        return False
-    cur.execute(
-        """
-        ALTER TABLE employee_leave_quotas
-        ADD COLUMN initial_used_days DECIMAL(7, 1) NOT NULL DEFAULT 0
-          COMMENT '도입 전 등 수동 초기 사용일(해당 연도·코드)' AFTER quota_days
-        """
-    )
-    return True
 
 
 def ensure_work_shift_types_table(conn: Connection) -> bool:

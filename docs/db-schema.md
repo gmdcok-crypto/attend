@@ -14,8 +14,9 @@
 | 테이블 | 용도 |
 |--------|------|
 | `employee_leave_records` | 사원별 휴가 사용 기간 |
-| `employee_leave_quotas` | 사원·휴가코드·연도별 부여 일수(잔여 계산용) |
 | `work_shift_types` | 근무시간 관리: 근태명·출근 시각·퇴근 시각(하루 안의 TIME) |
+
+연차 잔여 등은 `employee_leave_records`와 입사일 규칙으로 계산한다. (구 `employee_leave_quotas` 테이블은 제거됨.)
 
 시각 컬럼의 **비즈니스 의미는 KST** (`docs/korea-time-and-infrastructure.md`).
 
