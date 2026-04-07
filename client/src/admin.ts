@@ -887,7 +887,10 @@ function showView(id: string) {
   else stopEmployeeAutoRefresh()
   if (id === 'raw') loadRawPanel().catch((e) => adminAlert(String(e)))
   if (id === 'leave-emp') refreshLeaveEmpView().catch((e) => adminAlert(String(e)))
-  if (id === 'leave-promotion') refreshLeavePromotionView().catch((e) => adminAlert(String(e)))
+  if (id === 'leave-promotion') {
+    resetLeavePromotionQueryFiltersToAll()
+    refreshLeavePromotionView().catch((e) => adminAlert(String(e)))
+  }
 }
 
 document.querySelector('.admin-nav')?.addEventListener('click', (e) => {
@@ -1317,6 +1320,14 @@ async function loadLeavePromotionDeptOptions() {
     sel.appendChild(o)
   }
   if (keep && [...sel.options].some((o) => o.value === keep)) sel.value = keep
+}
+
+/** 연차촉진 조회 조건: 서명상태·부서를 「전체」로 (탭 진입 시 자동조회와 함께 사용) */
+function resetLeavePromotionQueryFiltersToAll(): void {
+  const statusEl = document.getElementById('lp-status') as HTMLSelectElement | null
+  if (statusEl) statusEl.value = ''
+  const deptEl = document.getElementById('lp-dept') as HTMLSelectElement | null
+  if (deptEl) deptEl.value = ''
 }
 
 async function runLeavePromotionSearch(showAlertWhenNoCampaign = false) {
