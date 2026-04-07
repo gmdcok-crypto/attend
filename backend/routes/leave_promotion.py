@@ -129,10 +129,7 @@ def list_targets(
     out: list[dict] = []
     for r in rows:
         emp_id = int(r["employee_id"])
-        try:
-            remaining = _remaining_total_for_year(conn, emp_id, y)
-        except Exception:
-            remaining = None
+        remaining = _remaining_total_for_year(conn, emp_id, y)
 
         ra = r.get("read_at")
         sa = r.get("signed_at")
@@ -180,6 +177,55 @@ def add_targets(
         added += int(cur2.rowcount or 0)
     conn.commit()
     return {"added": added}
+
+
+@router.post("/campaigns/{campaign_id}/targets/with-remaining-annual")
+def add_targets_with_remaining_annual(
+    campaign_id: int,
+    year: Optional[int] = Query(None, ge=2000, le=2100, description="기준 연도(기본: 올해)"),
+    conn: Connection = Depends(get_db),
+) -> dict:
+    """재직 사원 중 지정 연도 기준 연차(ANNUAL_LEAVE_CODE) 잔여일수 > 0 인 사람만 대상에 추가."""
+    cur = conn.cursor(DictCursor)
+    cur.execute(
+        "SELECT id FROM leave_promotion_campaigns WHERE id = %s LIMIT 1",
+        (campaign_id,),
+    )
+    if not cur.fetchone():
+        raise HTTPException(status_code=404, detail="캠페인을 찾을 수 없습니다.")
+
+    y = year if year is not None else date.today().year
+    cur.execute(
+        """
+        SELECT id FROM employees
+        WHERE status = '재직' OR status IS NULL OR TRIM(COALESCE(status, '')) = ''
+        ORDER BY id
+        """
+    )
+    emp_rows = cur.fetchall() or []
+    cur2 = conn.cursor()
+    added = 0
+    with_remaining = 0
+    for r in emp_rows:
+        eid = int(r["id"])
+        rem = _remaining_total_for_year(conn, eid, y)
+        if rem is None or rem <= 0:
+            continue
+        with_remaining += 1
+        cur2.execute(
+            """
+            INSERT IGNORE INTO leave_promotion_targets (campaign_id, employee_id)
+            VALUES (%s, %s)
+            """,
+            (campaign_id, eid),
+        )
+        added += int(cur2.rowcount or 0)
+    conn.commit()
+    return {
+        "year": y,
+        "added": added,
+        "with_remaining_annual": with_remaining,
+    }
 
 
 @router.post("/campaigns/{campaign_id}/send-first")

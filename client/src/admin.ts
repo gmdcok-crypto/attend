@@ -661,7 +661,8 @@ document.querySelector<HTMLDivElement>('#admin-root')!.innerHTML = `
                 </div>
                 <div class="form-actions">
                   <button type="button" class="btn btn-primary" id="lp-btn-campaign-save">캠페인 등록</button>
-                  <button type="button" class="btn btn-ghost" id="lp-btn-add-all-targets">등록 사원 대상 추가</button>
+                  <button type="button" class="btn btn-ghost" id="lp-btn-add-all-targets">등록 사원 전원 추가</button>
+                  <button type="button" class="btn btn-ghost" id="lp-btn-add-remaining-targets">잔여 연차 있는 사원 추가</button>
                   <button type="button" class="btn btn-ghost" id="lp-btn-preview">미리보기</button>
                   <button type="button" class="btn btn-primary" id="lp-btn-send-first">1차 발송</button>
                   <button type="button" class="btn btn-update" id="lp-btn-send-second">2차 발송</button>
@@ -1499,6 +1500,29 @@ function wireLeavePromotion() {
       })
       await refreshLeavePromotionView()
       adminAlert('등록된 사원을 촉진 대상에 반영했습니다.')
+    })().catch((e) => adminAlert(String(e)))
+  })
+  bindButtonById('lp-btn-add-remaining-targets', '연차촉진', () => {
+    void (async () => {
+      const cid = latestLeavePromotionCampaignId
+      if (!cid) {
+        adminAlert('먼저 캠페인을 등록하세요.')
+        return
+      }
+      const yearEl = document.getElementById('lp-year') as HTMLInputElement | null
+      const y = yearEl?.value?.trim() || String(new Date().getFullYear())
+      const res = await apiJson<{
+        year: number
+        added: number
+        with_remaining_annual: number
+      }>(
+        `/api/leave-promotion/campaigns/${cid}/targets/with-remaining-annual?year=${encodeURIComponent(y)}`,
+        { method: 'POST' },
+      )
+      await refreshLeavePromotionView()
+      adminAlert(
+        `기준연도 ${res.year}: 연차 잔여가 있는 재직 사원 ${res.with_remaining_annual}명 중 ${res.added}명을 새로 대상에 넣었습니다. (이미 있던 사원은 건너뜀)`,
+      )
     })().catch((e) => adminAlert(String(e)))
   })
   bindButtonById('lp-btn-send-first', '연차촉진', () => {
